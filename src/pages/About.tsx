@@ -1,5 +1,5 @@
 import React from 'react';
-import { GraduationCap, Award, Heart, Sparkles, MapPin, Mail, Share2 } from 'lucide-react';
+import { GraduationCap, Award, Heart, Sparkles, MapPin, Mail} from 'lucide-react';
 
 export const About: React.FC = () => {
   const education = [
