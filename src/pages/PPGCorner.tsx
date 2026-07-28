@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { MOCK_COURSES } from '../types/ppg';
 import type { Course, Reflection4C } from '../types/ppg';
 import { ReflectionModal } from '../components/ReflectionModal';
-import { BookOpen, FileText, ExternalLink, Sparkles, FolderOpen, Video, Image as ImageIcon } from 'lucide-react';
+import { FileText, ExternalLink, Sparkles, FolderOpen, Video, Image as ImageIcon } from 'lucide-react';
 
 const PPGCorner: React.FC = () => {
   const [activeModal, setActiveModal] = useState<{

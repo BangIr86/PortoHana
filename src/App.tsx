@@ -1,23 +1,29 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { Navbar } from './components/Navbar';
+import Footer from './components/Footer';
 import { Home } from './pages/Home';
 import { About } from './pages/About';
 import PPGCorner from './pages/PPGCorner';
+import Contact from './pages/Contact';
 
 function App() {
   return (
     <Router>
-      <div className="min-h-screen bg-hana-bg text-hana-navy pb-16">
+      <div className="min-h-screen bg-hana-bg text-hana-navy flex flex-col">
         <Navbar />
-        <main className="mt-4">
+        
+        {/* Main Content Area */}
+        <main className="flex-1 mt-4">
           <Routes>
             <Route path="/" element={<Home />} />
             <Route path="/about" element={<About />} />
             <Route path="/ppg-corner" element={<PPGCorner />} />
-            <Route path="/contact" element={<div className="text-center py-12 font-bold">Halaman Kontak</div>} />
-            <Route path="/admin" element={<div className="text-center py-12 font-bold">Panel Admin / CMS</div>} />
+            <Route path="/contact" element={<Contact />} />
+            <Route path="/admin" element={<div className="text-center py-20 font-bold text-2xl">Halaman Admin CMS (Tahap Backend) 🔒</div>} />
           </Routes>
         </main>
+
+        <Footer />
       </div>
     </Router>
   );

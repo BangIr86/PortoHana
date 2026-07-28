@@ -1,11 +1,20 @@
 @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
 
-@import 'tailwindcss/base';
-@import 'tailwindcss/components';
-@import 'tailwindcss/utilities';
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
 @layer base {
   body {
-    @apply bg-hana-bg text-hana-navy font-sans antialiased selection:bg-hana-yellow selection:text-hana-navy;
+    background-color: var(--color-hana-bg);
+    color: var(--color-hana-navy);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  
+  body::selection {
+    background-color: var(--color-hana-yellow);
+    color: var(--color-hana-navy);
   }
 }
