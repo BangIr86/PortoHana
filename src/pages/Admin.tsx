@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { 
   Lock, LogOut, LayoutDashboard, BookOpen, User, FolderOpen, 
-  ArrowRight, Plus, Trash2, Save, CheckCircle2, FileText, Sparkles
+  ArrowRight, Plus, Trash2, Save, CheckCircle2, FileText, Sparkles, UploadCloud
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import type { Course } from '../types/ppg';
@@ -14,16 +14,21 @@ const Admin: React.FC = () => {
 
   const [courses, setCourses] = useState<Course[]>([]);
 
+  // State Form Profil
   const [profileId, setProfileId] = useState<string | null>(null);
   const [profile, setProfile] = useState({
-    fullName: 'Hana Permata, S.Pd.',
-    title: 'Guru Pendidikan Dasar / SD',
-    bio: 'Seorang pendidik berdedikasi tinggi yang berfokus pada pembelajaran berpusat pada siswa.',
-    philosophy: 'Pendidikan bukan sekadar mengisi wadah yang kosong, melainkan menyalakan api rasa ingin tahu.',
-    email: 'hana.permata@example.com',
-    location: 'Jakarta, Indonesia',
-    photoUrl: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=600'
+    fullName: '',
+    title: '',
+    bio: '',
+    philosophy: '',
+    email: '',
+    location: '',
+    photoUrl: ''
   });
+
+  // State Khusus Upload File Foto
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
 
   const [newCourseCode, setNewCourseCode] = useState('');
   const [newCourseTitle, setNewCourseTitle] = useState('');
@@ -93,8 +98,41 @@ const Admin: React.FC = () => {
     else { alert('Passcode salah!'); setPasscode(''); }
   };
 
+  // LOGIKA SIMPAN PROFIL & UPLOAD FOTO KE STORAGE
   const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
+    let currentPhotoUrl = profile.photoUrl;
+
+    // Jika user memilih file foto baru
+    if (imageFile) {
+      setIsUploading(true);
+      const fileExt = imageFile.name.split('.').pop();
+      const fileName = `foto-profil-${Date.now()}.${fileExt}`;
+
+      // Upload ke Supabase Storage (Bucket: avatars)
+      const { error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(fileName, imageFile);
+
+      if (uploadError) {
+        alert('Gagal mengunggah foto! Pastikan bucket "avatars" sudah dibuat dan public.');
+        setIsUploading(false);
+        return;
+      }
+
+      // Dapatkan URL Publik dari foto yang baru diupload
+      const { data: publicUrlData } = supabase.storage
+        .from('avatars')
+        .getPublicUrl(fileName);
+
+      currentPhotoUrl = publicUrlData.publicUrl;
+      setIsUploading(false);
+      setImageFile(null); // Reset input file
+      
+      // Update state lokal agar foto langsung berubah di layar admin
+      setProfile(prev => ({ ...prev, photoUrl: currentPhotoUrl }));
+    }
+
     const payload = {
       full_name: profile.fullName,
       title: profile.title,
@@ -102,7 +140,7 @@ const Admin: React.FC = () => {
       philosophy: profile.philosophy,
       email: profile.email,
       location: profile.location,
-      photo_url: profile.photoUrl,
+      photo_url: currentPhotoUrl,
       updated_at: new Date().toISOString()
     };
 
@@ -112,7 +150,7 @@ const Admin: React.FC = () => {
       const { data } = await supabase.from('profiles').insert([payload]).select().single();
       if (data) setProfileId(data.id);
     }
-    showToast('Profil berhasil disimpan ke Database!');
+    showToast('Profil dan Foto berhasil disimpan!');
   };
 
   const handleAddCourse = async (e: React.FormEvent) => {
@@ -221,6 +259,30 @@ const Admin: React.FC = () => {
                 <h2 className="text-2xl font-black text-hana-navy">Kelola Informasi Profil</h2>
               </div>
               <form onSubmit={handleSaveProfile} className="space-y-4">
+                
+                {/* UPLOAD FOTO PROFIL */}
+                <div className="bg-slate-50 border-2 border-hana-navy p-5 rounded-2xl shadow-brutal-sm flex flex-col md:flex-row items-center gap-6">
+                  <div className="w-24 h-24 rounded-full bg-slate-200 border-2 border-hana-navy overflow-hidden shrink-0">
+                    {imageFile ? (
+                      <img src={URL.createObjectURL(imageFile)} alt="Preview" className="w-full h-full object-cover" />
+                    ) : profile.photoUrl ? (
+                      <img src={profile.photoUrl} alt="Profil" className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-slate-400"><User className="w-8 h-8" /></div>
+                    )}
+                  </div>
+                  <div className="flex-1 w-full">
+                    <label className="block text-xs font-extrabold text-hana-navy mb-2">Unggah Foto Profil Baru</label>
+                    <input 
+                      type="file" 
+                      accept="image/*"
+                      onChange={(e) => setImageFile(e.target.files ? e.target.files[0] : null)}
+                      className="w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-2 file:border-hana-navy file:text-sm file:font-bold file:bg-hana-yellow file:text-hana-navy hover:file:bg-yellow-300 transition-all cursor-pointer"
+                    />
+                    <p className="text-[10px] font-semibold text-slate-500 mt-2">*Maksimal ukuran file 2MB. Gunakan rasio 1:1 (persegi).</p>
+                  </div>
+                </div>
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-xs font-extrabold text-hana-navy mb-1">Nama Lengkap & Gelar</label>
@@ -241,11 +303,6 @@ const Admin: React.FC = () => {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-extrabold text-hana-navy mb-1">URL Foto Profil (Drive/Google Photos/Unsplash)</label>
-                  <input type="url" value={profile.photoUrl} onChange={(e) => setProfile({ ...profile, photoUrl: e.target.value })} className="w-full px-4 py-2.5 rounded-xl border-2 border-hana-navy font-bold text-sm bg-slate-50" placeholder="https://..." />
-                </div>
-
-                <div>
                   <label className="block text-xs font-extrabold text-hana-navy mb-1">Biografi Singkat</label>
                   <textarea rows={2} value={profile.bio} onChange={(e) => setProfile({ ...profile, bio: e.target.value })} className="w-full px-4 py-2.5 rounded-xl border-2 border-hana-navy font-medium text-sm bg-slate-50 resize-none"></textarea>
                 </div>
@@ -255,8 +312,13 @@ const Admin: React.FC = () => {
                   <textarea rows={3} value={profile.philosophy} onChange={(e) => setProfile({ ...profile, philosophy: e.target.value })} className="w-full px-4 py-2.5 rounded-xl border-2 border-hana-navy font-medium text-sm bg-slate-50 resize-none"></textarea>
                 </div>
 
-                <button type="submit" className="px-6 py-3 bg-hana-blue text-white font-black text-sm rounded-xl border-2 border-hana-navy shadow-brutal hover:bg-blue-600 transition-all flex items-center gap-2">
-                  <Save className="w-4 h-4" /> Simpan Profil ke Database
+                <button 
+                  type="submit" 
+                  disabled={isUploading}
+                  className="px-6 py-3 bg-hana-blue text-white font-black text-sm rounded-xl border-2 border-hana-navy shadow-brutal hover:bg-blue-600 disabled:opacity-50 transition-all flex items-center justify-center gap-2 w-full sm:w-auto"
+                >
+                  {isUploading ? <UploadCloud className="w-4 h-4 animate-bounce" /> : <Save className="w-4 h-4" />}
+                  {isUploading ? 'Sedang Mengunggah Foto...' : 'Simpan Profil ke Database'}
                 </button>
               </form>
             </div>
