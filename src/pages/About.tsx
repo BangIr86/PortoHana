@@ -1,7 +1,38 @@
-import React from 'react';
-import { GraduationCap, Award, Heart, Sparkles, MapPin, Mail} from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { GraduationCap, Award, Heart, Sparkles, MapPin, Mail } from 'lucide-react';
+import { supabase } from '../lib/supabase';
 
 export const About: React.FC = () => {
+  const [profile, setProfile] = useState({
+    fullName: 'Hana Permata, S.Pd.',
+    title: 'Guru Pendidikan Dasar / SD',
+    bio: 'Seorang pendidik berdedikasi tinggi yang berfokus pada pembelajaran berpusat pada siswa (student-centered learning).',
+    philosophy: 'Saya percaya bahwa setiap anak lahir dengan keunikan dan potensi emas masing-masing.',
+    email: 'hana.permata@example.com'
+  });
+
+  useEffect(() => {
+    const fetchProfile = async () => {
+      const { data } = await supabase
+        .from('profiles')
+        .select('*')
+        .limit(1)
+        .maybeSingle();
+
+      if (data) {
+        setProfile({
+          fullName: data.full_name || 'Hana Permata, S.Pd.',
+          title: data.title || 'Guru Pendidikan Dasar / SD',
+          bio: data.bio || 'Seorang pendidik berdedikasi tinggi.',
+          philosophy: data.philosophy || 'Saya percaya bahwa setiap anak lahir dengan keunikan...',
+          email: data.email || 'hana.permata@example.com'
+        });
+      }
+    };
+
+    fetchProfile();
+  }, []);
+
   const education = [
     {
       year: '2025 - Sekarang',
@@ -27,12 +58,12 @@ export const About: React.FC = () => {
   return (
     <div className="container mx-auto max-w-5xl px-4 py-8 space-y-12">
       
-      {/* 1. HEADER SECTION */}
+      {/* 1. HEADER SECTION DINAMIS */}
       <section className="bg-white border-2 border-hana-navy rounded-hana p-8 shadow-brutal flex flex-col md:flex-row items-center gap-8">
         <div className="w-40 h-40 rounded-full bg-hana-pink border-2 border-hana-navy p-2 shrink-0 shadow-brutal-sm relative">
           <img
             src="https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=400"
-            alt="Hana Permata"
+            alt={profile.fullName}
             className="w-full h-full object-cover rounded-full border border-hana-navy"
           />
           <span className="absolute bottom-1 right-1 bg-hana-yellow p-1.5 rounded-full border border-hana-navy">
@@ -42,26 +73,26 @@ export const About: React.FC = () => {
 
         <div className="space-y-3 text-center md:text-left">
           <div className="inline-block bg-hana-teal text-white text-xs font-bold px-3 py-1 rounded-full border border-hana-navy shadow-brutal-sm">
-            👩‍🏫 Pendidik Masa Depan
+            👩‍🏫 {profile.title}
           </div>
           <h1 className="text-3xl md:text-4xl font-extrabold text-hana-navy">
-            Hana Permata, S.Pd.
+            {profile.fullName}
           </h1>
           <p className="text-slate-600 font-medium leading-relaxed">
-            Seorang pendidik berdedikasi tinggi yang berfokus pada pembelajaran berpusat pada siswa (*student-centered learning*), integrasi teknologi pembelajaran, dan pembentukan karakter peserta didik.
+            {profile.bio}
           </p>
           <div className="flex flex-wrap items-center justify-center md:justify-start gap-4 pt-2 text-sm font-bold">
             <span className="flex items-center gap-1.5 text-slate-700">
               <MapPin className="w-4 h-4 text-hana-blue" /> Jakarta, Indonesia
             </span>
             <span className="flex items-center gap-1.5 text-slate-700">
-              <Mail className="w-4 h-4 text-hana-pink" /> hana.permata@example.com
+              <Mail className="w-4 h-4 text-hana-pink" /> {profile.email}
             </span>
           </div>
         </div>
       </section>
 
-      {/* 2. FILOSOFI & SKILLS GRID */}
+      {/* 2. FILOSOFI & SKILLS GRID DINAMIS */}
       <section className="grid grid-cols-1 md:grid-cols-12 gap-8">
         
         {/* Filosofi Mengajar */}
@@ -71,7 +102,7 @@ export const About: React.FC = () => {
             <h2>Filosofi Mengajar</h2>
           </div>
           <p className="text-hana-navy font-medium leading-relaxed">
-            Saya percaya bahwa setiap anak lahir dengan keunikan dan potensi emas masing-masing. Peran guru bukan untuk membentuk mereka sesuai cetakan yang sama, melainkan menjadi pemandu (*facilitator*) yang memfasilitasi mereka menemukan minat dan bakat terbaiknya melalui suasana belajar yang aman, nyaman, dan menyenangkan.
+            {profile.philosophy}
           </p>
         </div>
 
@@ -121,3 +152,5 @@ export const About: React.FC = () => {
     </div>
   );
 };
+
+export default About;

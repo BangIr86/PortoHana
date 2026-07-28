@@ -9,25 +9,35 @@ import type { Course } from '../types/ppg';
 const Admin: React.FC = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [passcode, setPasscode] = useState('');
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'matkul' | 'artefak' | 'refleksi'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'profil' | 'matkul' | 'artefak' | 'refleksi'>('dashboard');
   const [notification, setNotification] = useState<string | null>(null);
 
-  // Data State Asli dari Supabase
+  // Data State dari Supabase
   const [courses, setCourses] = useState<Course[]>([]);
 
-  // Form State: Mata Kuliah
+  // State Form Profil
+  const [profileId, setProfileId] = useState<string | null>(null);
+  const [profile, setProfile] = useState({
+    fullName: 'Hana Permata, S.Pd.',
+    title: 'Guru Pendidikan Dasar / SD',
+    bio: 'Seorang pendidik berdedikasi tinggi yang berfokus pada pembelajaran berpusat pada siswa.',
+    philosophy: 'Pendidikan bukan sekadar mengisi wadah yang kosong, melainkan menyalakan api rasa ingin tahu.',
+    email: 'hana.permata@example.com'
+  });
+
+  // State Form Mata Kuliah
   const [newCourseCode, setNewCourseCode] = useState('');
   const [newCourseTitle, setNewCourseTitle] = useState('');
   const [newCourseDesc, setNewCourseDesc] = useState('');
 
-  // Form State: Artefak
+  // State Form Artefak
   const [selectedTopicId, setSelectedTopicId] = useState('');
   const [artifactTitle, setArtifactTitle] = useState('');
   const [artifactType, setArtifactType] = useState<'pdf' | 'image' | 'video'>('pdf');
   const [artifactUrl, setArtifactUrl] = useState('');
   const [artifactDesc, setArtifactDesc] = useState('');
 
-  // Form State: Refleksi 4C
+  // State Form Refleksi 4C
   const [refleksiCourseId, setRefleksiCourseId] = useState('');
   const [connection, setConnection] = useState('');
   const [challenge, setChallenge] = useState('');
@@ -39,7 +49,27 @@ const Admin: React.FC = () => {
     setTimeout(() => setNotification(null), 3000);
   };
 
-  // FETCH DATA DARI SUPABASE
+  // FETCH DATA PROFIL DARI SUPABASE
+  const fetchProfileData = async () => {
+    const { data } = await supabase
+      .from('profiles')
+      .select('*')
+      .limit(1)
+      .maybeSingle();
+
+    if (data) {
+      setProfileId(data.id);
+      setProfile({
+        fullName: data.full_name || '',
+        title: data.title || '',
+        bio: data.bio || '',
+        philosophy: data.philosophy || '',
+        email: data.email || ''
+      });
+    }
+  };
+
+  // FETCH DATA MATKUL & ARTEFAK DARI SUPABASE
   const fetchSupabaseData = async () => {
     const { data, error } = await supabase
       .from('courses')
@@ -83,9 +113,9 @@ const Admin: React.FC = () => {
     }
   };
 
-  // Muat data saat pertama kali login
   useEffect(() => {
     if (isAuthenticated) {
+      fetchProfileData();
       fetchSupabaseData();
     }
   }, [isAuthenticated]);
@@ -100,7 +130,46 @@ const Admin: React.FC = () => {
     }
   };
 
-  // TAMBAH MATA KULIAH (Ke Supabase)
+  // SIMPAN PROFIL KE SUPABASE
+  const handleSaveProfile = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const payload = {
+      full_name: profile.fullName,
+      title: profile.title,
+      bio: profile.bio,
+      philosophy: profile.philosophy,
+      email: profile.email,
+      updated_at: new Date().toISOString()
+    };
+
+    if (profileId) {
+      const { error } = await supabase
+        .from('profiles')
+        .update(payload)
+        .eq('id', profileId);
+
+      if (error) {
+        alert('Gagal memperbarui profil!');
+        return;
+      }
+    } else {
+      const { data, error } = await supabase
+        .from('profiles')
+        .insert([payload])
+        .select()
+        .single();
+
+      if (error) {
+        alert('Gagal menyimpan profil baru!');
+        return;
+      }
+      if (data) setProfileId(data.id);
+    }
+
+    showToast('Profil berhasil disimpan ke Database!');
+  };
+
+  // TAMBAH MATA KULIAH
   const handleAddCourse = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newCourseTitle || !newCourseCode) return;
@@ -128,7 +197,7 @@ const Admin: React.FC = () => {
     setNewCourseTitle('');
     setNewCourseDesc('');
     showToast('Mata Kuliah berhasil disimpan!');
-    fetchSupabaseData(); 
+    fetchSupabaseData();
   };
 
   // HAPUS MATA KULIAH
@@ -136,11 +205,11 @@ const Admin: React.FC = () => {
     if (confirm('Yakin ingin menghapus mata kuliah ini secara permanen?')) {
       await supabase.from('courses').delete().eq('id', id);
       showToast('Mata kuliah berhasil dihapus.');
-      fetchSupabaseData(); 
+      fetchSupabaseData();
     }
   };
 
-  // TAMBAH ARTEFAK (Ke Supabase)
+  // TAMBAH ARTEFAK
   const handleAddArtifact = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!artifactTitle || !artifactUrl || !selectedTopicId) {
@@ -166,10 +235,10 @@ const Admin: React.FC = () => {
     setArtifactDesc('');
     setSelectedTopicId('');
     showToast('Artefak berhasil dipublikasikan!');
-    fetchSupabaseData(); 
+    fetchSupabaseData();
   };
 
-  // SIMPAN REFLEKSI 4C (Ke Supabase)
+  // SIMPAN REFLEKSI 4C
   const handleSaveReflection = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!refleksiCourseId) {
@@ -232,6 +301,7 @@ const Admin: React.FC = () => {
 
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+    { id: 'profil', label: 'Profil Saya', icon: User },
     { id: 'matkul', label: 'Mata Kuliah', icon: BookOpen },
     { id: 'artefak', label: 'Kelola Artefak', icon: FolderOpen },
     { id: 'refleksi', label: 'Tulis Refleksi 4C', icon: Sparkles },
@@ -278,6 +348,7 @@ const Admin: React.FC = () => {
 
         <main className="flex-1 bg-white border-2 border-hana-navy rounded-hana p-6 md:p-8 shadow-brutal relative">
           
+          {/* TAB 1: DASHBOARD */}
           {activeTab === 'dashboard' && (
             <div className="space-y-6">
               <div className="border-b-2 border-hana-navy pb-4">
@@ -298,6 +369,76 @@ const Admin: React.FC = () => {
             </div>
           )}
 
+          {/* TAB 2: PROFIL SAYA */}
+          {activeTab === 'profil' && (
+            <div className="space-y-6">
+              <div className="border-b-2 border-hana-navy pb-4">
+                <h2 className="text-2xl font-black text-hana-navy">Kelola Informasi Profil</h2>
+                <p className="text-slate-600 font-medium text-sm">Ubah nama, status, biodata, dan filosofi mengajar utama yang tersimpan di Supabase.</p>
+              </div>
+
+              <form onSubmit={handleSaveProfile} className="space-y-4">
+                <div>
+                  <label className="block text-xs font-extrabold text-hana-navy mb-1">Nama Lengkap & Gelar</label>
+                  <input
+                    type="text"
+                    value={profile.fullName}
+                    onChange={(e) => setProfile({ ...profile, fullName: e.target.value })}
+                    className="w-full px-4 py-2.5 rounded-xl border-2 border-hana-navy font-bold text-sm bg-slate-50"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-extrabold text-hana-navy mb-1">Status / Subtitle</label>
+                  <input
+                    type="text"
+                    value={profile.title}
+                    onChange={(e) => setProfile({ ...profile, title: e.target.value })}
+                    className="w-full px-4 py-2.5 rounded-xl border-2 border-hana-navy font-bold text-sm bg-slate-50"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-extrabold text-hana-navy mb-1">Email</label>
+                  <input
+                    type="email"
+                    value={profile.email}
+                    onChange={(e) => setProfile({ ...profile, email: e.target.value })}
+                    className="w-full px-4 py-2.5 rounded-xl border-2 border-hana-navy font-bold text-sm bg-slate-50"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-extrabold text-hana-navy mb-1">Biografi Singkat</label>
+                  <textarea
+                    rows={2}
+                    value={profile.bio}
+                    onChange={(e) => setProfile({ ...profile, bio: e.target.value })}
+                    className="w-full px-4 py-2.5 rounded-xl border-2 border-hana-navy font-medium text-sm bg-slate-50 resize-none"
+                  ></textarea>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-extrabold text-hana-navy mb-1">Filosofi Mengajar</label>
+                  <textarea
+                    rows={3}
+                    value={profile.philosophy}
+                    onChange={(e) => setProfile({ ...profile, philosophy: e.target.value })}
+                    className="w-full px-4 py-2.5 rounded-xl border-2 border-hana-navy font-medium text-sm bg-slate-50 resize-none"
+                  ></textarea>
+                </div>
+
+                <button
+                  type="submit"
+                  className="px-6 py-3 bg-hana-blue text-white font-black text-sm rounded-xl border-2 border-hana-navy shadow-brutal hover:bg-blue-600 transition-all flex items-center gap-2"
+                >
+                  <Save className="w-4 h-4" /> Simpan Profil ke Database
+                </button>
+              </form>
+            </div>
+          )}
+
+          {/* TAB 3: MATA KULIAH */}
           {activeTab === 'matkul' && (
             <div className="space-y-6">
               <div className="border-b-2 border-hana-navy pb-4">
@@ -334,6 +475,7 @@ const Admin: React.FC = () => {
             </div>
           )}
 
+          {/* TAB 4: KELOLA ARTEFAK */}
           {activeTab === 'artefak' && (
             <div className="space-y-6">
               <div className="border-b-2 border-hana-navy pb-4">
@@ -378,6 +520,7 @@ const Admin: React.FC = () => {
             </div>
           )}
 
+          {/* TAB 5: TULIS REFLEKSI 4C */}
           {activeTab === 'refleksi' && (
             <div className="space-y-6">
               <div className="border-b-2 border-hana-navy pb-4">
@@ -399,19 +542,19 @@ const Admin: React.FC = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-xs font-extrabold text-amber-600 mb-1">1. Connection (Keterkaitan)</label>
-                    <textarea rows={3} placeholder="Keterkaitan materi dengan peran pendidik..." value={connection} onChange={(e) => setConnection(e.target.value)} className="w-full px-4 py-2.5 rounded-xl border-2 border-hana-navy text-sm bg-amber-50 resize-none font-medium"></textarea>
+                    <textarea rows={3} placeholder="Keterkaitan materi..." value={connection} onChange={(e) => setConnection(e.target.value)} className="w-full px-4 py-2.5 rounded-xl border-2 border-hana-navy text-sm bg-amber-50 resize-none font-medium"></textarea>
                   </div>
                   <div>
                     <label className="block text-xs font-extrabold text-rose-600 mb-1">2. Challenge (Tantangan)</label>
-                    <textarea rows={3} placeholder="Materi apa yang menantang pemikiran..." value={challenge} onChange={(e) => setChallenge(e.target.value)} className="w-full px-4 py-2.5 rounded-xl border-2 border-hana-navy text-sm bg-rose-50 resize-none font-medium"></textarea>
+                    <textarea rows={3} placeholder="Tantangan pemikiran..." value={challenge} onChange={(e) => setChallenge(e.target.value)} className="w-full px-4 py-2.5 rounded-xl border-2 border-hana-navy text-sm bg-rose-50 resize-none font-medium"></textarea>
                   </div>
                   <div>
                     <label className="block text-xs font-extrabold text-sky-600 mb-1">3. Concept (Konsep)</label>
-                    <textarea rows={3} placeholder="Konsep utama yang Anda pelajari..." value={concept} onChange={(e) => setConcept(e.target.value)} className="w-full px-4 py-2.5 rounded-xl border-2 border-hana-navy text-sm bg-sky-50 resize-none font-medium"></textarea>
+                    <textarea rows={3} placeholder="Konsep utama..." value={concept} onChange={(e) => setConcept(e.target.value)} className="w-full px-4 py-2.5 rounded-xl border-2 border-hana-navy text-sm bg-sky-50 resize-none font-medium"></textarea>
                   </div>
                   <div>
                     <label className="block text-xs font-extrabold text-emerald-600 mb-1">4. Change (Perubahan)</label>
-                    <textarea rows={3} placeholder="Perubahan positif pada diri Anda..." value={change} onChange={(e) => setChange(e.target.value)} className="w-full px-4 py-2.5 rounded-xl border-2 border-hana-navy text-sm bg-emerald-50 resize-none font-medium"></textarea>
+                    <textarea rows={3} placeholder="Perubahan positif..." value={change} onChange={(e) => setChange(e.target.value)} className="w-full px-4 py-2.5 rounded-xl border-2 border-hana-navy text-sm bg-emerald-50 resize-none font-medium"></textarea>
                   </div>
                 </div>
 
@@ -421,6 +564,7 @@ const Admin: React.FC = () => {
               </form>
             </div>
           )}
+
         </main>
       </div>
     </div>

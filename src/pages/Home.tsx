@@ -1,8 +1,55 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowUpRight, BookOpen, GraduationCap, FileCheck, Sparkles, Heart } from 'lucide-react';
+import { supabase } from '../lib/supabase';
 
 export const Home: React.FC = () => {
+  const [profile, setProfile] = useState({
+    fullName: 'Hana Permata, S.Pd.',
+    title: 'Guru Pendidikan Dasar / SD',
+    bio: 'Selamat datang di ruang dokumentasi & refleksi pembelajaran saya selama mengikuti program PPG Calon Guru.',
+    philosophy: 'Pendidikan bukan sekadar mengisi wadah yang kosong, melainkan menyalakan api rasa ingin tahu agar setiap murid berkembang sesuai kodrat alam dan zamannya.'
+  });
+
+  const [courseCount, setCourseCount] = useState<number>(0);
+  const [artifactCount, setArtifactCount] = useState<number>(0);
+
+  useEffect(() => {
+    const fetchHomeData = async () => {
+      // 1. Ambil Data Profil dari Supabase
+      const { data: profileData } = await supabase
+        .from('profiles')
+        .select('*')
+        .limit(1)
+        .maybeSingle();
+
+      if (profileData) {
+        setProfile({
+          fullName: profileData.full_name || 'Hana Permata, S.Pd.',
+          title: profileData.title || 'Guru Pendidikan Dasar / SD',
+          bio: profileData.bio || 'Selamat datang di ruang dokumentasi & refleksi pembelajaran saya.',
+          philosophy: profileData.philosophy || 'Pendidikan bukan sekadar mengisi wadah yang kosong...'
+        });
+      }
+
+      // 2. Hitung Jumlah Mata Kuliah Otomatis dari Supabase
+      const { count: cCount } = await supabase
+        .from('courses')
+        .select('*', { count: 'exact', head: true });
+
+      if (cCount !== null) setCourseCount(cCount);
+
+      // 3. Hitung Jumlah Artefak LK 2 Otomatis dari Supabase
+      const { count: aCount } = await supabase
+        .from('artifacts')
+        .select('*', { count: 'exact', head: true });
+
+      if (aCount !== null) setArtifactCount(aCount);
+    };
+
+    fetchHomeData();
+  }, []);
+
   return (
     <div className="container mx-auto max-w-5xl px-4 py-8 space-y-12">
       
@@ -25,12 +72,12 @@ export const Home: React.FC = () => {
             <h1 className="text-4xl md:text-5xl font-black text-hana-navy leading-tight tracking-tight">
               Portofolio Digital <br />
               <span className="bg-hana-yellow px-2 py-0.5 rounded-lg border border-hana-navy inline-block mt-1">
-                Hana Permata
+                {profile.fullName}
               </span>
             </h1>
 
             <p className="text-slate-600 font-medium text-base md:text-lg leading-relaxed">
-              Selamat datang di ruang dokumentasi & refleksi pembelajaran saya selama mengikuti program **PPG Calon Guru**. Menjelajahi artefak, karya, dan filosofi mengajar secara transparan & interaktif.
+              {profile.bio}
             </p>
 
             {/* CTA Buttons */}
@@ -54,19 +101,17 @@ export const Home: React.FC = () => {
           {/* Sisi Kanan: Visual Profile Card */}
           <div className="md:col-span-5 flex justify-center">
             <div className="relative group">
-              {/* Card Shadow Background Decorative */}
               <div className="absolute inset-0 bg-hana-teal rounded-hana border-2 border-hana-navy rotate-3 group-hover:rotate-6 transition-transform"></div>
               
-              {/* Main Card */}
               <div className="relative bg-white border-2 border-hana-navy rounded-hana p-4 shadow-brutal -rotate-2 group-hover:rotate-0 transition-transform">
                 <img
                   src="https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=600"
-                  alt="Foto Profile Hana"
+                  alt={profile.fullName}
                   className="w-full h-64 object-cover rounded-2xl border-2 border-hana-navy"
                 />
                 <div className="mt-4 text-center">
-                  <h3 className="font-extrabold text-lg text-hana-navy">Hana Permata, S.Pd.</h3>
-                  <p className="text-xs font-semibold text-slate-500">Guru Pendidikan Dasar / SD</p>
+                  <h3 className="font-extrabold text-lg text-hana-navy">{profile.fullName}</h3>
+                  <p className="text-xs font-semibold text-slate-500">{profile.title}</p>
                 </div>
               </div>
             </div>
@@ -75,7 +120,7 @@ export const Home: React.FC = () => {
         </div>
       </section>
 
-      {/* 2. QUICK STATS CARDS */}
+      {/* 2. QUICK STATS CARDS DINAMIS */}
       <section className="grid grid-cols-1 sm:grid-cols-3 gap-6">
         
         {/* Card 1 */}
@@ -84,7 +129,7 @@ export const Home: React.FC = () => {
             <BookOpen className="w-8 h-8 text-hana-navy" />
           </div>
           <div>
-            <span className="block text-3xl font-black text-hana-navy">12+</span>
+            <span className="block text-3xl font-black text-hana-navy">{courseCount}</span>
             <span className="text-xs font-extrabold text-hana-navy/80 uppercase tracking-wider">Mata Kuliah</span>
           </div>
         </div>
@@ -95,7 +140,7 @@ export const Home: React.FC = () => {
             <FileCheck className="w-8 h-8" />
           </div>
           <div>
-            <span className="block text-3xl font-black">24+</span>
+            <span className="block text-3xl font-black">{artifactCount}</span>
             <span className="text-xs font-extrabold uppercase tracking-wider opacity-90">Artefak LK 2</span>
           </div>
         </div>
@@ -113,14 +158,14 @@ export const Home: React.FC = () => {
 
       </section>
 
-      {/* 3. BRIEF PHILOSOPHY QUOTE */}
+      {/* 3. BRIEF PHILOSOPHY QUOTE DINAMIS */}
       <section className="bg-hana-navy text-white rounded-hana p-8 border-2 border-hana-navy shadow-brutal relative overflow-hidden">
         <div className="flex items-start gap-4">
           <Heart className="w-10 h-10 text-hana-yellow shrink-0 fill-hana-yellow" />
           <div className="space-y-2">
             <h4 className="text-xl font-extrabold text-hana-yellow">Filosofi Mengajar</h4>
             <blockquote className="text-slate-200 italic font-medium leading-relaxed">
-              "Pendidikan bukan sekadar mengisi wadah yang kosong, melainkan menyalakan api rasa ingin tahu agar setiap murid berkembang sesuai kodrat alam dan zamannya."
+              "{profile.philosophy}"
             </blockquote>
           </div>
         </div>
@@ -129,3 +174,5 @@ export const Home: React.FC = () => {
     </div>
   );
 };
+
+export default Home;
