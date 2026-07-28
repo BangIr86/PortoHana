@@ -5,6 +5,7 @@ import { Home } from './pages/Home';
 import { About } from './pages/About';
 import PPGCorner from './pages/PPGCorner';
 import Contact from './pages/Contact';
+import Admin from './pages/Admin'; // <-- IMPORT BARU
 
 function App() {
   return (
@@ -19,7 +20,7 @@ function App() {
             <Route path="/about" element={<About />} />
             <Route path="/ppg-corner" element={<PPGCorner />} />
             <Route path="/contact" element={<Contact />} />
-            <Route path="/admin" element={<div className="text-center py-20 font-bold text-2xl">Halaman Admin CMS (Tahap Backend) 🔒</div>} />
+            <Route path="/admin" element={<Admin />} /> {/* <-- ROUTE DIPERBARUI */}
           </Routes>
         </main>
 
