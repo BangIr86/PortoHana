@@ -1,30 +1,38 @@
 import React, { useState, useEffect } from 'react';
 import { 
   Lock, LogOut, LayoutDashboard, BookOpen, User, FolderOpen, 
-  ArrowRight, Plus, Trash2, Save, CheckCircle2, FileText 
+  ArrowRight, Plus, Trash2, Save, CheckCircle2, FileText, Sparkles
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
-import type { Course, Artifact } from '../types/ppg';
+import type { Course } from '../types/ppg';
 
 const Admin: React.FC = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [passcode, setPasscode] = useState('');
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'profil' | 'matkul' | 'artefak'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'matkul' | 'artefak' | 'refleksi'>('dashboard');
   const [notification, setNotification] = useState<string | null>(null);
 
   // Data State Asli dari Supabase
   const [courses, setCourses] = useState<Course[]>([]);
 
-  // Form State
+  // Form State: Mata Kuliah
   const [newCourseCode, setNewCourseCode] = useState('');
   const [newCourseTitle, setNewCourseTitle] = useState('');
   const [newCourseDesc, setNewCourseDesc] = useState('');
 
+  // Form State: Artefak
   const [selectedTopicId, setSelectedTopicId] = useState('');
   const [artifactTitle, setArtifactTitle] = useState('');
   const [artifactType, setArtifactType] = useState<'pdf' | 'image' | 'video'>('pdf');
   const [artifactUrl, setArtifactUrl] = useState('');
   const [artifactDesc, setArtifactDesc] = useState('');
+
+  // Form State: Refleksi 4C
+  const [refleksiCourseId, setRefleksiCourseId] = useState('');
+  const [connection, setConnection] = useState('');
+  const [challenge, setChallenge] = useState('');
+  const [concept, setConcept] = useState('');
+  const [change, setChange] = useState('');
 
   const showToast = (msg: string) => {
     setNotification(msg);
@@ -97,7 +105,6 @@ const Admin: React.FC = () => {
     e.preventDefault();
     if (!newCourseTitle || !newCourseCode) return;
 
-    // 1. Simpan Matkul Baru
     const { data: courseData, error: courseError } = await supabase
       .from('courses')
       .insert([{ code: newCourseCode, title: newCourseTitle, description: newCourseDesc, semester: 1 }])
@@ -105,32 +112,31 @@ const Admin: React.FC = () => {
       .single();
 
     if (courseError) {
-      alert('Gagal menambah mata kuliah!');
+      alert('Gagal menambah mata kuliah! Pastikan RLS sudah mati.');
       return;
     }
 
-    // 2. Otomatis buat 1 Topik default untuk menampung artefak
     if (courseData) {
       await supabase.from('topics').insert([{
         course_id: courseData.id,
-        title: 'Topik 1: Pengantar ' + newCourseTitle,
-        description: 'Topik perdana untuk mata kuliah ini.'
+        title: 'Topik 1: ' + newCourseTitle,
+        description: 'Topik perdana.'
       }]);
     }
 
     setNewCourseCode('');
     setNewCourseTitle('');
     setNewCourseDesc('');
-    showToast('Mata Kuliah baru berhasil disimpan ke Database!');
-    fetchSupabaseData(); // Refresh data
+    showToast('Mata Kuliah berhasil disimpan!');
+    fetchSupabaseData(); 
   };
 
   // HAPUS MATA KULIAH
   const handleDeleteCourse = async (id: string) => {
-    if (confirm('Yakin ingin menghapus mata kuliah ini dari database permanen?')) {
+    if (confirm('Yakin ingin menghapus mata kuliah ini secara permanen?')) {
       await supabase.from('courses').delete().eq('id', id);
       showToast('Mata kuliah berhasil dihapus.');
-      fetchSupabaseData(); // Refresh data
+      fetchSupabaseData(); 
     }
   };
 
@@ -138,7 +144,7 @@ const Admin: React.FC = () => {
   const handleAddArtifact = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!artifactTitle || !artifactUrl || !selectedTopicId) {
-      alert('Judul, URL, dan Topik Artefak wajib diisi!');
+      alert('Judul, URL, dan Topik wajib diisi!');
       return;
     }
 
@@ -160,7 +166,36 @@ const Admin: React.FC = () => {
     setArtifactDesc('');
     setSelectedTopicId('');
     showToast('Artefak berhasil dipublikasikan!');
-    fetchSupabaseData(); // Refresh data
+    fetchSupabaseData(); 
+  };
+
+  // SIMPAN REFLEKSI 4C (Ke Supabase)
+  const handleSaveReflection = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!refleksiCourseId) {
+      alert('Pilih Mata Kuliah terlebih dahulu!');
+      return;
+    }
+
+    const refData = { connection, challenge, concept, change };
+
+    const { error } = await supabase
+      .from('courses')
+      .update({ reflection_4c: refData })
+      .eq('id', refleksiCourseId);
+
+    if (error) {
+      alert('Gagal menyimpan refleksi!');
+      return;
+    }
+
+    setConnection('');
+    setChallenge('');
+    setConcept('');
+    setChange('');
+    setRefleksiCourseId('');
+    showToast('Refleksi 4C berhasil disimpan & tayang!');
+    fetchSupabaseData();
   };
 
   if (!isAuthenticated) {
@@ -199,6 +234,7 @@ const Admin: React.FC = () => {
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'matkul', label: 'Mata Kuliah', icon: BookOpen },
     { id: 'artefak', label: 'Kelola Artefak', icon: FolderOpen },
+    { id: 'refleksi', label: 'Tulis Refleksi 4C', icon: Sparkles },
   ];
 
   return (
@@ -336,7 +372,51 @@ const Admin: React.FC = () => {
                 </div>
 
                 <button type="submit" className="px-6 py-3 bg-hana-teal text-white font-black text-sm rounded-xl border-2 border-hana-navy shadow-brutal hover:bg-teal-600 transition-all flex items-center gap-2">
-                  <FileText className="w-4 h-4" /> Simpan ke Database
+                  <FileText className="w-4 h-4" /> Simpan Artefak ke Database
+                </button>
+              </form>
+            </div>
+          )}
+
+          {activeTab === 'refleksi' && (
+            <div className="space-y-6">
+              <div className="border-b-2 border-hana-navy pb-4">
+                <h2 className="text-2xl font-black text-hana-navy">Tulis Jurnal Refleksi 4C</h2>
+                <p className="text-slate-600 font-medium text-sm">Tulis refleksi mendalam Anda untuk ditampilkan di Modals PPG Corner.</p>
+              </div>
+
+              <form onSubmit={handleSaveReflection} className="space-y-4">
+                <div>
+                  <label className="block text-xs font-extrabold text-hana-navy mb-1">Pilih Mata Kuliah</label>
+                  <select value={refleksiCourseId} onChange={(e) => setRefleksiCourseId(e.target.value)} className="w-full px-4 py-2.5 rounded-xl border-2 border-hana-navy font-bold text-sm bg-slate-50">
+                    <option value="" disabled>-- Pilih Mata Kuliah --</option>
+                    {courses.map(c => (
+                      <option key={c.id} value={c.id}>{c.code} - {c.title}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-extrabold text-amber-600 mb-1">1. Connection (Keterkaitan)</label>
+                    <textarea rows={3} placeholder="Keterkaitan materi dengan peran pendidik..." value={connection} onChange={(e) => setConnection(e.target.value)} className="w-full px-4 py-2.5 rounded-xl border-2 border-hana-navy text-sm bg-amber-50 resize-none font-medium"></textarea>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-extrabold text-rose-600 mb-1">2. Challenge (Tantangan)</label>
+                    <textarea rows={3} placeholder="Materi apa yang menantang pemikiran..." value={challenge} onChange={(e) => setChallenge(e.target.value)} className="w-full px-4 py-2.5 rounded-xl border-2 border-hana-navy text-sm bg-rose-50 resize-none font-medium"></textarea>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-extrabold text-sky-600 mb-1">3. Concept (Konsep)</label>
+                    <textarea rows={3} placeholder="Konsep utama yang Anda pelajari..." value={concept} onChange={(e) => setConcept(e.target.value)} className="w-full px-4 py-2.5 rounded-xl border-2 border-hana-navy text-sm bg-sky-50 resize-none font-medium"></textarea>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-extrabold text-emerald-600 mb-1">4. Change (Perubahan)</label>
+                    <textarea rows={3} placeholder="Perubahan positif pada diri Anda..." value={change} onChange={(e) => setChange(e.target.value)} className="w-full px-4 py-2.5 rounded-xl border-2 border-hana-navy text-sm bg-emerald-50 resize-none font-medium"></textarea>
+                  </div>
+                </div>
+
+                <button type="submit" className="px-6 py-3 bg-hana-navy text-white font-black text-sm rounded-xl border-2 border-hana-navy shadow-brutal hover:bg-slate-800 transition-all flex items-center gap-2">
+                  <Sparkles className="w-4 h-4" /> Simpan Jurnal Refleksi
                 </button>
               </form>
             </div>
