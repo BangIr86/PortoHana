@@ -9,7 +9,7 @@ const Footer: React.FC = () => {
         <div className="flex items-center gap-2 font-extrabold text-hana-navy text-sm md:text-base">
           <span>Dibuat dengan</span>
           <Heart className="w-5 h-5 text-hana-pink fill-hana-pink" />
-          <span>oleh Hana Permata © 2026</span>
+          <span>oleh Uus Ursula © 2026</span>
         </div>
 
         <div className="flex items-center gap-4">
