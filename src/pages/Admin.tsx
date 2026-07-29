@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { 
   Lock, LogOut, LayoutDashboard, BookOpen, User, FolderOpen, 
-  ArrowRight, Trash2, Save, CheckCircle2, FileText, Sparkles, UploadCloud, Pencil, X, Mail
+  ArrowRight, Plus, Trash2, Save, CheckCircle2, FileText, Sparkles, UploadCloud, Pencil, X, Mail, Layers
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import type { Course } from '../types/ppg';
@@ -9,38 +9,43 @@ import type { Course } from '../types/ppg';
 const Admin: React.FC = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [passcode, setPasscode] = useState('');
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'profil' | 'matkul' | 'artefak' | 'refleksi' | 'pesan'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'profil' | 'matkul' | 'topik' | 'artefak' | 'refleksi' | 'pesan'>('dashboard');
   const [notification, setNotification] = useState<string | null>(null);
 
   const [courses, setCourses] = useState<Course[]>([]);
-  const [messages, setMessages] = useState<any[]>([]); // State untuk Pesan Masuk
+  const [messages, setMessages] = useState<any[]>([]);
 
-  // State Form Profil
+  // State Profil
   const [profileId, setProfileId] = useState<string | null>(null);
-  const [profile, setProfile] = useState({
-    fullName: '', title: '', bio: '', philosophy: '', email: '', location: '', photoUrl: ''
-  });
+  const [profile, setProfile] = useState({ fullName: '', title: '', bio: '', philosophy: '', email: '', location: '', photoUrl: '' });
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
 
-  // State Form Lainnya
+  // State Matkul
   const [newCourseCode, setNewCourseCode] = useState('');
   const [newCourseTitle, setNewCourseTitle] = useState('');
-  const [newCourseDesc, setNewCourseDesc] = useState('');
-  
   const [editingCourseId, setEditingCourseId] = useState<string | null>(null);
   const [editCourseCode, setEditCourseCode] = useState('');
   const [editCourseTitle, setEditCourseTitle] = useState('');
 
+  // State Topik
+  const [newTopicCourseId, setNewTopicCourseId] = useState('');
+  const [newTopicTitle, setNewTopicTitle] = useState('');
+  const [newTopicDesc, setNewTopicDesc] = useState('');
+  const [editingTopicId, setEditingTopicId] = useState<string | null>(null);
+  const [editTopicTitle, setEditTopicTitle] = useState('');
+  const [editTopicDesc, setEditTopicDesc] = useState('');
+
+  // State Artefak
   const [selectedTopicId, setSelectedTopicId] = useState('');
   const [artifactTitle, setArtifactTitle] = useState('');
   const [artifactType, setArtifactType] = useState<'pdf' | 'image' | 'video'>('pdf');
   const [artifactUrl, setArtifactUrl] = useState('');
-  
   const [editingArtifactId, setEditingArtifactId] = useState<string | null>(null);
   const [editArtifactTitle, setEditArtifactTitle] = useState('');
   const [editArtifactUrl, setEditArtifactUrl] = useState('');
 
+  // State Refleksi
   const [refleksiCourseId, setRefleksiCourseId] = useState('');
   const [connection, setConnection] = useState('');
   const [challenge, setChallenge] = useState('');
@@ -51,10 +56,7 @@ const Admin: React.FC = () => {
 
   const fetchProfileData = async () => {
     const { data } = await supabase.from('profiles').select('*').limit(1).maybeSingle();
-    if (data) {
-      setProfileId(data.id);
-      setProfile({ fullName: data.full_name || '', title: data.title || '', bio: data.bio || '', philosophy: data.philosophy || '', email: data.email || '', location: data.location || '', photoUrl: data.photo_url || '' });
-    }
+    if (data) setProfileId(data.id); setProfile({ fullName: data?.full_name || '', title: data?.title || '', bio: data?.bio || '', philosophy: data?.philosophy || '', email: data?.email || '', location: data?.location || '', photoUrl: data?.photo_url || '' });
   };
 
   const fetchSupabaseData = async () => {
@@ -62,28 +64,22 @@ const Admin: React.FC = () => {
     if (data) {
       const formatted: Course[] = data.map((c: any) => ({
         id: c.id, code: c.code, title: c.title, description: c.description, semester: c.semester, reflection4c: c.reflection_4c,
-        topics: (c.topics || []).map((t: any) => ({ id: t.id, title: t.title, description: t.description, reflection4c: t.reflection_4c, artifacts: (t.artifacts || []).map((a: any) => ({ id: a.id, title: a.title, type: a.type, fileUrl: a.file_url, description: a.description })) }))
+        topics: (c.topics || []).sort((a:any, b:any) => a.title.localeCompare(b.title)).map((t: any) => ({ id: t.id, title: t.title, description: t.description, reflection4c: t.reflection_4c, artifacts: (t.artifacts || []).map((a: any) => ({ id: a.id, title: a.title, type: a.type, fileUrl: a.file_url, description: a.description })) }))
       }));
       setCourses(formatted);
     }
   };
 
-  // AMBIL PESAN DARI DATABASE
   const fetchMessages = async () => {
     const { data } = await supabase.from('messages').select('*').order('created_at', { ascending: false });
     if (data) setMessages(data);
   };
 
-  useEffect(() => {
-    if (isAuthenticated) { fetchProfileData(); fetchSupabaseData(); fetchMessages(); }
-  }, [isAuthenticated]);
+  useEffect(() => { if (isAuthenticated) { fetchProfileData(); fetchSupabaseData(); fetchMessages(); } }, [isAuthenticated]);
 
-  const handleLogin = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (passcode === '2026') setIsAuthenticated(true);
-    else { alert('Passcode salah!'); setPasscode(''); }
-  };
+  const handleLogin = (e: React.FormEvent) => { e.preventDefault(); if (passcode === '2026') setIsAuthenticated(true); else { alert('Passcode salah!'); setPasscode(''); } };
 
+  // PROFIL CRUD
   const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
     let currentPhotoUrl = profile.photoUrl;
@@ -91,38 +87,42 @@ const Admin: React.FC = () => {
       setIsUploading(true);
       const fileExt = imageFile.name.split('.').pop();
       const fileName = `foto-profil-${Date.now()}.${fileExt}`;
-      const { error: uploadError } = await supabase.storage.from('avatars').upload(fileName, imageFile);
-      if (uploadError) { alert('Gagal mengunggah foto!'); setIsUploading(false); return; }
-      const { data: publicUrlData } = supabase.storage.from('avatars').getPublicUrl(fileName);
-      currentPhotoUrl = publicUrlData.publicUrl;
-      setIsUploading(false); setImageFile(null);
-      setProfile(prev => ({ ...prev, photoUrl: currentPhotoUrl }));
+      const { error } = await supabase.storage.from('avatars').upload(fileName, imageFile);
+      if (error) { alert('Gagal mengunggah foto!'); setIsUploading(false); return; }
+      currentPhotoUrl = supabase.storage.from('avatars').getPublicUrl(fileName).data.publicUrl;
+      setIsUploading(false); setImageFile(null); setProfile(prev => ({ ...prev, photoUrl: currentPhotoUrl }));
     }
     const payload = { full_name: profile.fullName, title: profile.title, bio: profile.bio, philosophy: profile.philosophy, email: profile.email, location: profile.location, photo_url: currentPhotoUrl, updated_at: new Date().toISOString() };
     if (profileId) await supabase.from('profiles').update(payload).eq('id', profileId);
-    else {
-      const { data } = await supabase.from('profiles').insert([payload]).select().single();
-      if (data) setProfileId(data.id);
-    }
-    showToast('Profil berhasil disimpan!');
+    else { const { data } = await supabase.from('profiles').insert([payload]).select().single(); if (data) setProfileId(data.id); }
+    showToast('Profil disimpan!');
   };
 
-  const handleAddCourse = async (e: React.FormEvent) => { e.preventDefault(); if (!newCourseTitle || !newCourseCode) return; const { data } = await supabase.from('courses').insert([{ code: newCourseCode, title: newCourseTitle, description: newCourseDesc, semester: 1 }]).select().single(); if (data) await supabase.from('topics').insert([{ course_id: data.id, title: 'Topik 1: ' + newCourseTitle, description: 'Topik perdana.' }]); setNewCourseCode(''); setNewCourseTitle(''); setNewCourseDesc(''); showToast('Mata Kuliah disimpan!'); fetchSupabaseData(); };
-  const startEditCourse = (course: Course) => { setEditingCourseId(course.id); setEditCourseCode(course.code); setEditCourseTitle(course.title); };
-  const handleUpdateCourse = async (id: string) => { await supabase.from('courses').update({ code: editCourseCode, title: editCourseTitle }).eq('id', id); setEditingCourseId(null); showToast('Mata kuliah diperbarui!'); fetchSupabaseData(); };
-  const handleDeleteCourse = async (id: string) => { if (confirm('Yakin hapus matkul ini permanen?')) { await supabase.from('courses').delete().eq('id', id); showToast('Mata kuliah dihapus.'); fetchSupabaseData(); } };
+  // MATKUL CRUD
+  const handleAddCourse = async (e: React.FormEvent) => { e.preventDefault(); if (!newCourseTitle || !newCourseCode) return; const { data } = await supabase.from('courses').insert([{ code: newCourseCode, title: newCourseTitle, semester: 1 }]).select().single(); if (data) await supabase.from('topics').insert([{ course_id: data.id, title: 'Topik 1: Pengantar', description: 'Topik perdana.' }]); setNewCourseCode(''); setNewCourseTitle(''); showToast('Matkul ditambahkan!'); fetchSupabaseData(); };
+  const handleUpdateCourse = async (id: string) => { await supabase.from('courses').update({ code: editCourseCode, title: editCourseTitle }).eq('id', id); setEditingCourseId(null); showToast('Matkul diperbarui!'); fetchSupabaseData(); };
+  const handleDeleteCourse = async (id: string) => { if (confirm('Yakin hapus matkul ini?')) { await supabase.from('courses').delete().eq('id', id); showToast('Matkul dihapus.'); fetchSupabaseData(); } };
+
+  // TOPIK CRUD
+  const handleAddTopic = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newTopicCourseId || !newTopicTitle) return;
+    await supabase.from('topics').insert([{ course_id: newTopicCourseId, title: newTopicTitle, description: newTopicDesc }]);
+    setNewTopicTitle(''); setNewTopicDesc(''); showToast('Topik baru ditambahkan!'); fetchSupabaseData();
+  };
+  const handleUpdateTopic = async (id: string) => { await supabase.from('topics').update({ title: editTopicTitle, description: editTopicDesc }).eq('id', id); setEditingTopicId(null); showToast('Topik diperbarui!'); fetchSupabaseData(); };
+  const handleDeleteTopic = async (id: string) => { if (confirm('Yakin hapus topik ini beserta artefaknya?')) { await supabase.from('topics').delete().eq('id', id); showToast('Topik dihapus.'); fetchSupabaseData(); } };
+
+  // ARTEFAK CRUD
   const handleAddArtifact = async (e: React.FormEvent) => { e.preventDefault(); if (!artifactTitle || !artifactUrl || !selectedTopicId) return; await supabase.from('artifacts').insert([{ topic_id: selectedTopicId, title: artifactTitle, type: artifactType, file_url: artifactUrl }]); setArtifactTitle(''); setArtifactUrl(''); setSelectedTopicId(''); showToast('Artefak dipublikasikan!'); fetchSupabaseData(); };
-  const startEditArtifact = (art: any) => { setEditingArtifactId(art.id); setEditArtifactTitle(art.title); setEditArtifactUrl(art.fileUrl); };
   const handleUpdateArtifact = async (id: string) => { await supabase.from('artifacts').update({ title: editArtifactTitle, file_url: editArtifactUrl }).eq('id', id); setEditingArtifactId(null); showToast('Artefak diperbarui!'); fetchSupabaseData(); };
   const handleDeleteArtifact = async (id: string) => { if (confirm('Yakin hapus artefak ini?')) { await supabase.from('artifacts').delete().eq('id', id); showToast('Artefak dihapus.'); fetchSupabaseData(); } };
+
+  // REFLEKSI CRUD
   const handleSaveReflection = async (e: React.FormEvent) => { e.preventDefault(); if (!refleksiCourseId) return; await supabase.from('courses').update({ reflection_4c: { connection, challenge, concept, change } }).eq('id', refleksiCourseId); setConnection(''); setChallenge(''); setConcept(''); setChange(''); setRefleksiCourseId(''); showToast('Refleksi 4C disimpan!'); fetchSupabaseData(); };
-  
-  const handleDeleteMessage = async (id: string) => {
-    if (confirm('Yakin hapus pesan ini?')) {
-      await supabase.from('messages').delete().eq('id', id);
-      showToast('Pesan dihapus.'); fetchMessages();
-    }
-  };
+
+  // PESAN CRUD
+  const handleDeleteMessage = async (id: string) => { if (confirm('Yakin hapus pesan ini?')) { await supabase.from('messages').delete().eq('id', id); showToast('Pesan dihapus.'); fetchMessages(); } };
 
   if (!isAuthenticated) {
     return (
@@ -143,6 +143,7 @@ const Admin: React.FC = () => {
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'profil', label: 'Profil Saya', icon: User },
     { id: 'matkul', label: 'Mata Kuliah', icon: BookOpen },
+    { id: 'topik', label: 'Kelola Topik', icon: Layers }, // <-- MENU BARU TOPIK
     { id: 'artefak', label: 'Kelola Artefak', icon: FolderOpen },
     { id: 'refleksi', label: 'Tulis Refleksi 4C', icon: Sparkles },
     { id: 'pesan', label: 'Pesan Masuk', icon: Mail },
@@ -172,16 +173,18 @@ const Admin: React.FC = () => {
 
         <main className="flex-1 bg-white border-2 border-hana-navy rounded-hana p-6 md:p-8 shadow-brutal relative">
           
+          {/* TAB DASHBOARD */}
           {activeTab === 'dashboard' && (
             <div className="space-y-6">
               <div className="border-b-2 border-hana-navy pb-4"><h2 className="text-2xl font-black text-hana-navy">Ringkasan Sistem</h2></div>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div className="bg-hana-yellow border-2 border-hana-navy p-5 rounded-2xl shadow-brutal-sm space-y-2"><span className="text-xs font-black uppercase tracking-wider text-hana-navy/80">Total Matkul</span><p className="text-4xl font-black text-hana-navy">{courses.length}</p></div>
-                <div className="bg-hana-teal text-white border-2 border-hana-navy p-5 rounded-2xl shadow-brutal-sm space-y-2"><span className="text-xs font-black uppercase tracking-wider text-white/80">Pesan Masuk</span><p className="text-4xl font-black">{messages.length}</p></div>
+                <div className="bg-hana-yellow border-2 border-hana-navy p-5 rounded-2xl shadow-brutal-sm space-y-2"><span className="text-xs font-black uppercase text-hana-navy/80">Total Matkul</span><p className="text-4xl font-black text-hana-navy">{courses.length}</p></div>
+                <div className="bg-hana-teal text-white border-2 border-hana-navy p-5 rounded-2xl shadow-brutal-sm space-y-2"><span className="text-xs font-black uppercase text-white/80">Pesan Masuk</span><p className="text-4xl font-black">{messages.length}</p></div>
               </div>
             </div>
           )}
 
+          {/* TAB PROFIL */}
           {activeTab === 'profil' && (
              <div className="space-y-6">
              <div className="border-b-2 border-hana-navy pb-4"><h2 className="text-2xl font-black text-hana-navy">Kelola Informasi Profil</h2></div>
@@ -199,27 +202,28 @@ const Admin: React.FC = () => {
                  <div><label className="block text-xs font-extrabold text-hana-navy mb-1">Nama Lengkap & Gelar</label><input type="text" value={profile.fullName} onChange={(e) => setProfile({ ...profile, fullName: e.target.value })} className="w-full px-4 py-2.5 rounded-xl border-2 border-hana-navy font-bold text-sm bg-slate-50" /></div>
                  <div><label className="block text-xs font-extrabold text-hana-navy mb-1">Status / Subtitle</label><input type="text" value={profile.title} onChange={(e) => setProfile({ ...profile, title: e.target.value })} className="w-full px-4 py-2.5 rounded-xl border-2 border-hana-navy font-bold text-sm bg-slate-50" /></div>
                  <div><label className="block text-xs font-extrabold text-hana-navy mb-1">Email</label><input type="email" value={profile.email} onChange={(e) => setProfile({ ...profile, email: e.target.value })} className="w-full px-4 py-2.5 rounded-xl border-2 border-hana-navy font-bold text-sm bg-slate-50" /></div>
-                 <div><label className="block text-xs font-extrabold text-hana-navy mb-1">Lokasi (Kota, Negara)</label><input type="text" value={profile.location} onChange={(e) => setProfile({ ...profile, location: e.target.value })} className="w-full px-4 py-2.5 rounded-xl border-2 border-hana-navy font-bold text-sm bg-slate-50" /></div>
+                 <div><label className="block text-xs font-extrabold text-hana-navy mb-1">Lokasi</label><input type="text" value={profile.location} onChange={(e) => setProfile({ ...profile, location: e.target.value })} className="w-full px-4 py-2.5 rounded-xl border-2 border-hana-navy font-bold text-sm bg-slate-50" /></div>
                </div>
-               <div><label className="block text-xs font-extrabold text-hana-navy mb-1">Biografi Singkat</label><textarea rows={2} value={profile.bio} onChange={(e) => setProfile({ ...profile, bio: e.target.value })} className="w-full px-4 py-2.5 rounded-xl border-2 border-hana-navy font-medium text-sm bg-slate-50 resize-none"></textarea></div>
+               <div><label className="block text-xs font-extrabold text-hana-navy mb-1">Biografi</label><textarea rows={2} value={profile.bio} onChange={(e) => setProfile({ ...profile, bio: e.target.value })} className="w-full px-4 py-2.5 rounded-xl border-2 border-hana-navy font-medium text-sm bg-slate-50 resize-none"></textarea></div>
                <div><label className="block text-xs font-extrabold text-hana-navy mb-1">Filosofi Mengajar</label><textarea rows={3} value={profile.philosophy} onChange={(e) => setProfile({ ...profile, philosophy: e.target.value })} className="w-full px-4 py-2.5 rounded-xl border-2 border-hana-navy font-medium text-sm bg-slate-50 resize-none"></textarea></div>
-               <button type="submit" disabled={isUploading} className="px-6 py-3 bg-hana-blue text-white font-black text-sm rounded-xl border-2 border-hana-navy shadow-brutal hover:bg-blue-600 disabled:opacity-50 transition-all flex items-center gap-2">
+               <button type="submit" disabled={isUploading} className="px-6 py-3 bg-hana-blue text-white font-black text-sm rounded-xl border-2 border-hana-navy shadow-brutal hover:bg-blue-600 disabled:opacity-50 flex items-center gap-2">
                  {isUploading ? <UploadCloud className="w-4 h-4 animate-bounce" /> : <Save className="w-4 h-4" />} {isUploading ? 'Mengunggah...' : 'Simpan Profil'}
                </button>
              </form>
            </div>
           )}
 
+          {/* TAB MATKUL */}
           {activeTab === 'matkul' && (
-            // ... (KODE MATKUL TETAP SAMA SEPERTI SEBELUMNYA)
             <div className="space-y-6">
               <div className="border-b-2 border-hana-navy pb-4"><h2 className="text-2xl font-black text-hana-navy">Kelola Mata Kuliah</h2></div>
               <form onSubmit={handleAddCourse} className="bg-slate-50 border-2 border-hana-navy p-4 rounded-2xl space-y-3 shadow-brutal-sm">
+                <div className="flex items-center gap-2 font-extrabold text-hana-navy text-sm"><Plus className="w-4 h-4" /> Tambah Matkul Baru</div>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  <input type="text" placeholder="Kode (PPG-002)" value={newCourseCode} onChange={(e) => setNewCourseCode(e.target.value)} className="px-3 py-2 rounded-xl border-2 border-hana-navy text-xs font-bold" />
+                  <input type="text" placeholder="Kode (e.g. PPG-01)" value={newCourseCode} onChange={(e) => setNewCourseCode(e.target.value)} className="px-3 py-2 rounded-xl border-2 border-hana-navy text-xs font-bold" />
                   <input type="text" placeholder="Nama Mata Kuliah" value={newCourseTitle} onChange={(e) => setNewCourseTitle(e.target.value)} className="sm:col-span-2 px-3 py-2 rounded-xl border-2 border-hana-navy text-xs font-bold" />
                 </div>
-                <button type="submit" className="px-4 py-2 bg-hana-yellow text-hana-navy font-extrabold text-xs rounded-xl border-2 border-hana-navy shadow-brutal-sm">+ Tambah Baru</button>
+                <button type="submit" className="px-4 py-2 bg-hana-yellow text-hana-navy font-extrabold text-xs rounded-xl border-2 border-hana-navy shadow-brutal-sm">Simpan Matkul</button>
               </form>
               <div className="space-y-3">
                 {courses.map((course) => (
@@ -235,7 +239,7 @@ const Admin: React.FC = () => {
                       <div className="flex items-center justify-between gap-4">
                         <div><span className="text-[10px] font-extrabold text-hana-blue uppercase">{course.code}</span><h4 className="font-extrabold text-sm text-hana-navy">{course.title}</h4></div>
                         <div className="flex items-center gap-2">
-                          <button onClick={() => startEditCourse(course)} className="p-2 text-hana-blue border border-hana-navy rounded-xl hover:bg-slate-50"><Pencil className="w-4 h-4" /></button>
+                          <button onClick={() => { setEditingCourseId(course.id); setEditCourseCode(course.code); setEditCourseTitle(course.title); }} className="p-2 text-hana-blue border border-hana-navy rounded-xl hover:bg-slate-50"><Pencil className="w-4 h-4" /></button>
                           <button onClick={() => handleDeleteCourse(course.id)} className="p-2 text-rose-600 border border-hana-navy rounded-xl hover:bg-rose-50"><Trash2 className="w-4 h-4" /></button>
                         </div>
                       </div>
@@ -246,11 +250,65 @@ const Admin: React.FC = () => {
             </div>
           )}
 
+          {/* TAB TOPIK BARU */}
+          {activeTab === 'topik' && (
+            <div className="space-y-6">
+              <div className="border-b-2 border-hana-navy pb-4"><h2 className="text-2xl font-black text-hana-navy">Kelola Topik / Bab</h2></div>
+              
+              <form onSubmit={handleAddTopic} className="bg-slate-50 border-2 border-hana-navy p-4 rounded-2xl space-y-3 shadow-brutal-sm">
+                <div className="flex items-center gap-2 font-extrabold text-hana-navy text-sm"><Plus className="w-4 h-4" /> Tambah Topik Baru</div>
+                <select value={newTopicCourseId} onChange={e => setNewTopicCourseId(e.target.value)} className="w-full px-3 py-2 rounded-xl border-2 border-hana-navy text-sm font-bold bg-white">
+                  <option value="" disabled>-- Pilih Mata Kuliah --</option>
+                  {courses.map(c => <option key={c.id} value={c.id}>{c.code} - {c.title}</option>)}
+                </select>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <input type="text" placeholder="Judul Topik (Contoh: Topik 2: Asesmen)" value={newTopicTitle} onChange={e => setNewTopicTitle(e.target.value)} className="px-3 py-2 rounded-xl border-2 border-hana-navy text-sm font-bold bg-white" />
+                  <input type="text" placeholder="Deskripsi Singkat" value={newTopicDesc} onChange={e => setNewTopicDesc(e.target.value)} className="px-3 py-2 rounded-xl border-2 border-hana-navy text-sm font-bold bg-white" />
+                </div>
+                <button type="submit" className="px-4 py-2 bg-hana-yellow text-hana-navy font-extrabold text-xs rounded-xl border-2 border-hana-navy shadow-brutal-sm">Simpan Topik</button>
+              </form>
+
+              <div className="space-y-4">
+                {courses.map(c => (
+                  <div key={c.id} className="border-2 border-hana-navy rounded-2xl bg-white shadow-brutal-sm overflow-hidden">
+                    <div className="bg-slate-100 px-4 py-2 border-b-2 border-hana-navy font-black text-hana-navy text-sm flex items-center gap-2">
+                      <BookOpen className="w-4 h-4 text-hana-teal" /> {c.title}
+                    </div>
+                    <div className="p-4 space-y-2">
+                      {c.topics.length === 0 && <p className="text-xs font-bold text-slate-400 italic">Belum ada topik.</p>}
+                      {c.topics.map(t => (
+                        <div key={t.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 border-2 border-dashed border-hana-navy rounded-xl">
+                          {editingTopicId === t.id ? (
+                            <div className="flex-1 flex gap-2 w-full">
+                              <input type="text" value={editTopicTitle} onChange={e => setEditTopicTitle(e.target.value)} className="flex-1 px-2 py-1 text-xs font-bold border-2 border-hana-navy rounded-lg" />
+                              <input type="text" value={editTopicDesc} onChange={e => setEditTopicDesc(e.target.value)} className="flex-1 px-2 py-1 text-xs font-medium border-2 border-hana-navy rounded-lg" />
+                              <button onClick={() => handleUpdateTopic(t.id)} className="p-1.5 bg-hana-teal text-white border-2 border-hana-navy rounded-lg"><CheckCircle2 className="w-4 h-4" /></button>
+                              <button onClick={() => setEditingTopicId(null)} className="p-1.5 bg-rose-100 text-rose-600 border-2 border-hana-navy rounded-lg"><X className="w-4 h-4" /></button>
+                            </div>
+                          ) : (
+                            <>
+                              <div><h4 className="font-extrabold text-sm text-hana-navy">{t.title}</h4><p className="text-xs font-medium text-slate-500">{t.description}</p></div>
+                              <div className="flex items-center gap-2 shrink-0">
+                                <button onClick={() => { setEditingTopicId(t.id); setEditTopicTitle(t.title); setEditTopicDesc(t.description || ''); }} className="p-1.5 text-hana-blue border border-hana-navy rounded-lg hover:bg-slate-50"><Pencil className="w-4 h-4" /></button>
+                                <button onClick={() => handleDeleteTopic(t.id)} className="p-1.5 text-rose-600 border border-hana-navy rounded-lg hover:bg-rose-50"><Trash2 className="w-4 h-4" /></button>
+                              </div>
+                            </>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* TAB ARTEFAK */}
           {activeTab === 'artefak' && (
-             // ... (KODE ARTEFAK TETAP SAMA SEPERTI SEBELUMNYA)
              <div className="space-y-8">
              <div className="border-b-2 border-hana-navy pb-4"><h2 className="text-2xl font-black text-hana-navy">Kelola Artefak</h2></div>
              <form onSubmit={handleAddArtifact} className="space-y-4 bg-slate-50 p-5 rounded-2xl border-2 border-hana-navy shadow-brutal-sm">
+               <h3 className="font-extrabold text-sm text-hana-navy flex items-center gap-2"><Plus className="w-4 h-4"/> Unggah Artefak Baru</h3>
                <select value={selectedTopicId} onChange={(e) => setSelectedTopicId(e.target.value)} className="w-full px-4 py-2.5 rounded-xl border-2 border-hana-navy font-bold text-sm bg-white">
                  <option value="" disabled>-- Pilih Topik Tujuan --</option>
                  {courses.flatMap(c => c.topics.map(t => <option key={t.id} value={t.id}>{c.code} - {t.title}</option>))}
@@ -266,19 +324,21 @@ const Admin: React.FC = () => {
              </form>
              <div className="space-y-4">
                {courses.map(c => c.topics.map(t => t.artifacts.map(art => (
-                 <div key={art.id} className="border-2 border-hana-navy p-3 rounded-xl bg-white flex items-center justify-between gap-3 shadow-brutal-sm">
+                 <div key={art.id} className="border-2 border-hana-navy p-3 rounded-xl bg-white flex flex-col md:flex-row md:items-center justify-between gap-3 shadow-brutal-sm">
                    {editingArtifactId === art.id ? (
-                     <div className="flex-1 flex gap-2 w-full">
+                     <div className="flex-1 flex flex-col md:flex-row gap-2 w-full">
                        <input type="text" value={editArtifactTitle} onChange={e => setEditArtifactTitle(e.target.value)} className="flex-1 px-2 py-1 text-xs font-bold border-2 border-hana-navy rounded-lg" />
                        <input type="url" value={editArtifactUrl} onChange={e => setEditArtifactUrl(e.target.value)} className="flex-1 px-2 py-1 text-xs font-medium border-2 border-hana-navy rounded-lg" />
-                       <button onClick={() => handleUpdateArtifact(art.id)} className="p-1.5 bg-hana-teal text-white border-2 border-hana-navy rounded-lg"><CheckCircle2 className="w-4 h-4" /></button>
-                       <button onClick={() => setEditingArtifactId(null)} className="p-1.5 bg-rose-100 text-rose-600 border-2 border-hana-navy rounded-lg"><X className="w-4 h-4" /></button>
+                       <div className="flex gap-2 shrink-0">
+                         <button onClick={() => handleUpdateArtifact(art.id)} className="p-1.5 bg-hana-teal text-white border-2 border-hana-navy rounded-lg"><CheckCircle2 className="w-4 h-4" /></button>
+                         <button onClick={() => setEditingArtifactId(null)} className="p-1.5 bg-rose-100 text-rose-600 border-2 border-hana-navy rounded-lg"><X className="w-4 h-4" /></button>
+                       </div>
                      </div>
                    ) : (
                      <>
-                       <div className="flex-1 min-w-0"><h4 className="font-bold text-sm text-hana-navy truncate">{art.title}</h4></div>
+                       <div className="flex-1 min-w-0"><h4 className="font-bold text-sm text-hana-navy truncate">{art.title}</h4><p className="text-[10px] text-slate-400 truncate">{art.fileUrl}</p></div>
                        <div className="flex items-center gap-2 shrink-0">
-                         <button onClick={() => startEditArtifact(art)} className="p-1.5 text-hana-blue border border-hana-navy rounded-lg"><Pencil className="w-4 h-4" /></button>
+                         <button onClick={() => { setEditingArtifactId(art.id); setEditArtifactTitle(art.title); setEditArtifactUrl(art.fileUrl); }} className="p-1.5 text-hana-blue border border-hana-navy rounded-lg"><Pencil className="w-4 h-4" /></button>
                          <button onClick={() => handleDeleteArtifact(art.id)} className="p-1.5 text-rose-600 border border-hana-navy rounded-lg"><Trash2 className="w-4 h-4" /></button>
                        </div>
                      </>
@@ -289,8 +349,8 @@ const Admin: React.FC = () => {
            </div>
           )}
 
+          {/* TAB REFLEKSI */}
           {activeTab === 'refleksi' && (
-             // ... (KODE REFLEKSI TETAP SAMA)
              <div className="space-y-6">
              <div className="border-b-2 border-hana-navy pb-4"><h2 className="text-2xl font-black text-hana-navy">Tulis Refleksi 4C</h2></div>
              <form onSubmit={handleSaveReflection} className="space-y-4">
@@ -309,33 +369,22 @@ const Admin: React.FC = () => {
            </div>
           )}
 
-          {/* TAB PESAN MASUK (INBOX) */}
+          {/* TAB PESAN MASUK */}
           {activeTab === 'pesan' && (
             <div className="space-y-6">
-              <div className="border-b-2 border-hana-navy pb-4">
-                <h2 className="text-2xl font-black text-hana-navy">Kotak Pesan Masuk 📬</h2>
-                <p className="text-slate-600 text-sm font-medium">Pesan yang dikirim dari halaman "Kontak" akan muncul di sini.</p>
-              </div>
-              
+              <div className="border-b-2 border-hana-navy pb-4"><h2 className="text-2xl font-black text-hana-navy">Kotak Pesan Masuk 📬</h2></div>
               <div className="space-y-4">
-                {messages.length === 0 ? (
-                  <div className="p-8 border-2 border-dashed border-hana-navy/30 rounded-2xl text-center text-slate-500 font-bold">Belum ada pesan masuk.</div>
-                ) : (
-                  messages.map(msg => (
-                    <div key={msg.id} className="bg-slate-50 border-2 border-hana-navy rounded-2xl p-5 shadow-brutal-sm relative">
-                      <button onClick={() => handleDeleteMessage(msg.id)} className="absolute top-4 right-4 p-2 text-rose-600 hover:bg-rose-100 rounded-xl"><Trash2 className="w-4 h-4" /></button>
-                      <h3 className="font-extrabold text-hana-navy text-lg">{msg.name}</h3>
-                      <a href={`mailto:${msg.email}`} className="text-xs font-bold text-hana-blue hover:underline block mb-3">{msg.email}</a>
-                      <div className="bg-white border-2 border-hana-navy p-4 rounded-xl text-sm font-medium text-slate-700 leading-relaxed">
-                        "{msg.message}"
-                      </div>
-                    </div>
-                  ))
-                )}
+                {messages.length === 0 ? <div className="p-8 border-2 border-dashed border-hana-navy/30 rounded-2xl text-center text-slate-500 font-bold">Belum ada pesan masuk.</div> : messages.map(msg => (
+                  <div key={msg.id} className="bg-slate-50 border-2 border-hana-navy rounded-2xl p-5 shadow-brutal-sm relative">
+                    <button onClick={() => handleDeleteMessage(msg.id)} className="absolute top-4 right-4 p-2 text-rose-600 hover:bg-rose-100 rounded-xl"><Trash2 className="w-4 h-4" /></button>
+                    <h3 className="font-extrabold text-hana-navy text-lg">{msg.name}</h3>
+                    <a href={`mailto:${msg.email}`} className="text-xs font-bold text-hana-blue hover:underline block mb-3">{msg.email}</a>
+                    <div className="bg-white border-2 border-hana-navy p-4 rounded-xl text-sm font-medium text-slate-700 leading-relaxed">"{msg.message}"</div>
+                  </div>
+                ))}
               </div>
             </div>
           )}
-
         </main>
       </div>
     </div>
