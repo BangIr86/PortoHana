@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import type { Course, Reflection4C } from '../types/ppg';
 import { ReflectionModal } from '../components/ReflectionModal';
-import { BookOpen, FileText, ExternalLink, Sparkles, FolderOpen, Video, Image as ImageIcon } from 'lucide-react';
+import { FileText, ExternalLink, Sparkles, FolderOpen, Video, Image as ImageIcon } from 'lucide-react';
 
 const PPGCorner: React.FC = () => {
   const [courses, setCourses] = useState<Course[]>([]);
@@ -14,7 +14,7 @@ const PPGCorner: React.FC = () => {
 
   useEffect(() => {
     const fetchSupabaseData = async () => {
-      const { data, error } = await supabase
+      const { data } = await supabase
         .from('courses')
         .select(`
           id, code, title, description, semester, reflection_4c,

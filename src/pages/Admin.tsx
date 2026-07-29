@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { 
   Lock, LogOut, LayoutDashboard, BookOpen, User, FolderOpen, 
-  ArrowRight, Plus, Trash2, Save, CheckCircle2, FileText, Sparkles, UploadCloud, Pencil, X, Mail
+  ArrowRight, Trash2, Save, CheckCircle2, FileText, Sparkles, UploadCloud, Pencil, X, Mail
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import type { Course } from '../types/ppg';
