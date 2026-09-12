@@ -41,6 +41,8 @@ const Admin: React.FC = () => {
   const [artifactTitle, setArtifactTitle] = useState('');
   const [artifactType, setArtifactType] = useState<'pdf' | 'image' | 'video'>('pdf');
   const [artifactUrl, setArtifactUrl] = useState('');
+  const [artifactInputType, setArtifactInputType] = useState<'link' | 'file'>('link');
+  const [artifactFile, setArtifactFile] = useState<File | null>(null);
   const [editingArtifactId, setEditingArtifactId] = useState<string | null>(null);
   const [editArtifactTitle, setEditArtifactTitle] = useState('');
   const [editArtifactUrl, setEditArtifactUrl] = useState('');
@@ -114,7 +116,34 @@ const Admin: React.FC = () => {
   const handleDeleteTopic = async (id: string) => { if (confirm('Yakin hapus topik ini beserta artefaknya?')) { await supabase.from('topics').delete().eq('id', id); showToast('Topik dihapus.'); fetchSupabaseData(); } };
 
   // ARTEFAK CRUD
-  const handleAddArtifact = async (e: React.FormEvent) => { e.preventDefault(); if (!artifactTitle || !artifactUrl || !selectedTopicId) return; await supabase.from('artifacts').insert([{ topic_id: selectedTopicId, title: artifactTitle, type: artifactType, file_url: artifactUrl }]); setArtifactTitle(''); setArtifactUrl(''); setSelectedTopicId(''); showToast('Artefak dipublikasikan!'); fetchSupabaseData(); };
+  const handleAddArtifact = async (e: React.FormEvent) => { 
+    e.preventDefault(); 
+    if (!artifactTitle || !selectedTopicId) return; 
+
+    let finalUrl = artifactUrl;
+
+    if (artifactInputType === 'file' && artifactFile) {
+      setIsUploading(true);
+      const fileExt = artifactFile.name.split('.').pop();
+      const fileName = `artefak-${Date.now()}.${fileExt}`;
+      const { error } = await supabase.storage.from('artifacts').upload(fileName, artifactFile);
+      if (error) { 
+        alert('Gagal mengunggah file artefak!'); 
+        setIsUploading(false); 
+        return; 
+      }
+      finalUrl = supabase.storage.from('artifacts').getPublicUrl(fileName).data.publicUrl;
+      setIsUploading(false);
+    } else if (artifactInputType === 'link' && !artifactUrl) {
+      alert('URL tidak boleh kosong!');
+      return;
+    }
+
+    if (!finalUrl) return;
+
+    await supabase.from('artifacts').insert([{ topic_id: selectedTopicId, title: artifactTitle, type: artifactType, file_url: finalUrl }]); 
+    setArtifactTitle(''); setArtifactUrl(''); setArtifactFile(null); setSelectedTopicId(''); showToast('Artefak dipublikasikan!'); fetchSupabaseData(); 
+  };
   const handleUpdateArtifact = async (id: string) => { await supabase.from('artifacts').update({ title: editArtifactTitle, file_url: editArtifactUrl }).eq('id', id); setEditingArtifactId(null); showToast('Artefak diperbarui!'); fetchSupabaseData(); };
   const handleDeleteArtifact = async (id: string) => { if (confirm('Yakin hapus artefak ini?')) { await supabase.from('artifacts').delete().eq('id', id); showToast('Artefak dihapus.'); fetchSupabaseData(); } };
 
@@ -318,9 +347,23 @@ const Admin: React.FC = () => {
                  <select value={artifactType} onChange={(e) => setArtifactType(e.target.value as any)} className="w-full px-4 py-2.5 rounded-xl border-2 border-hana-navy font-bold text-sm bg-white">
                    <option value="pdf">Document / PDF</option><option value="image">Foto</option><option value="video">Video</option>
                  </select>
-                 <input type="url" placeholder="URL File / Drive" value={artifactUrl} onChange={(e) => setArtifactUrl(e.target.value)} className="w-full px-4 py-2.5 rounded-xl border-2 border-hana-navy font-bold text-sm bg-white" />
+                 <div className="flex flex-col gap-3">
+                   <div className="flex gap-4">
+                     <label className="flex items-center gap-2 text-sm font-bold text-hana-navy">
+                       <input type="radio" name="artifactInputType" checked={artifactInputType === 'link'} onChange={() => setArtifactInputType('link')} className="accent-hana-navy" /> Link URL
+                     </label>
+                     <label className="flex items-center gap-2 text-sm font-bold text-hana-navy">
+                       <input type="radio" name="artifactInputType" checked={artifactInputType === 'file'} onChange={() => setArtifactInputType('file')} className="accent-hana-navy" /> Upload File
+                     </label>
+                   </div>
+                   {artifactInputType === 'link' ? (
+                     <input type="url" placeholder="URL File / Drive" value={artifactUrl} onChange={(e) => setArtifactUrl(e.target.value)} className="w-full px-4 py-2.5 rounded-xl border-2 border-hana-navy font-bold text-sm bg-white" />
+                   ) : (
+                     <input type="file" onChange={(e) => setArtifactFile(e.target.files?.[0] || null)} className="w-full px-2 py-2 rounded-xl border-2 border-hana-navy font-bold text-sm bg-white file:mr-4 file:py-1 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-black file:bg-hana-navy file:text-white" />
+                   )}
+                 </div>
                </div>
-               <button type="submit" className="px-6 py-2.5 bg-hana-teal text-white font-black text-sm rounded-xl border-2 border-hana-navy shadow-brutal-sm flex items-center gap-2"><FileText className="w-4 h-4" /> Simpan Artefak</button>
+               <button type="submit" disabled={isUploading} className="px-6 py-2.5 bg-hana-teal text-white font-black text-sm rounded-xl border-2 border-hana-navy shadow-brutal-sm flex items-center gap-2 disabled:opacity-50"><FileText className="w-4 h-4" /> {isUploading ? 'Menyimpan...' : 'Simpan Artefak'}</button>
              </form>
              <div className="space-y-4">
                {courses.map(c => c.topics.map(t => t.artifacts.map(art => (
