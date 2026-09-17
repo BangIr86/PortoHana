@@ -142,7 +142,8 @@ const Admin: React.FC = () => {
     if (!finalUrl) return;
 
     await supabase.from('artifacts').insert([{ topic_id: selectedTopicId, title: artifactTitle, type: artifactType, file_url: finalUrl }]); 
-    setArtifactTitle(''); setArtifactUrl(''); setArtifactFile(null); setSelectedTopicId(''); showToast('Artefak dipublikasikan!'); fetchSupabaseData(); 
+    setArtifactTitle(''); setArtifactUrl(''); setArtifactFile(null); setSelectedTopicId(''); setArtifactType('pdf'); setArtifactInputType('link'); showToast('Artefak dipublikasikan!'); fetchSupabaseData(); 
+    if (e.target instanceof HTMLFormElement) e.target.reset();
   };
   const handleUpdateArtifact = async (id: string) => { await supabase.from('artifacts').update({ title: editArtifactTitle, file_url: editArtifactUrl }).eq('id', id); setEditingArtifactId(null); showToast('Artefak diperbarui!'); fetchSupabaseData(); };
   const handleDeleteArtifact = async (id: string) => { if (confirm('Yakin hapus artefak ini?')) { await supabase.from('artifacts').delete().eq('id', id); showToast('Artefak dihapus.'); fetchSupabaseData(); } };
