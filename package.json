@@ -5,7 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "clean": "node scripts/clean-cache.js",
     "build": "tsc -b && vite build",
+    "postbuild": "node scripts/clean-cache.js",
     "lint": "eslint .",
     "preview": "vite preview"
   },
