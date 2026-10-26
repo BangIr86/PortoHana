@@ -1,13 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import { GraduationCap, Award, Heart, Sparkles, MapPin, Mail } from 'lucide-react';
+import { GraduationCap, Award, Heart, Sparkles, MapPin, Mail, Compass, Target, CheckCircle2 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 
 export const About: React.FC = () => {
   const [profile, setProfile] = useState({
     fullName: 'Hana Permata, S.Pd.',
     title: 'Guru Pendidikan Dasar / SD',
-    bio: 'Seorang pendidik berdedikasi tinggi...',
-    philosophy: 'Saya percaya bahwa setiap anak lahir dengan keunikan...',
+    bio: 'Seorang pendidik berdedikasi tinggi yang berkomitmen mendampingi peserta didik bertumbuh sesuai kodrat alam dan zamannya.',
+    philosophy: 'Saya percaya bahwa setiap anak lahir dengan keunikan dan potensinya masing-masing. Peran pendidik bukanlah menuntut atau mencetak, melainkan menuntun benih-benih kebaikan agar dapat mekar secara optimal dalam lingkungan belajar yang aman, nyaman, dan berpihak pada murid.',
+    visionIndonesia: 'Mewujudkan pendidikan Indonesia yang inklusif, merata, berpusat pada murid, serta melahirkan generasi yang berdaya cipta, bernalar kritis, dan berkarakter kuat sesuai Profil Pelajar Pancasila.',
+    visionTeacher: 'Menjadi pendidik profesional yang reflektif, adaptif terhadap kemajuan teknologi pembelajaran, mengedepankan diferensiasi, serta senantiasa menghadirkan pembelajaran yang memanusiakan hubungan dan berorientasi pada well-being murid.',
+    mission: '1. Merancang dan memfasilitasi pembelajaran berdiferensiasi yang kontekstual, kolaboratif, dan menyenangkan.\n2. Melakukan asesmen diagnostik dan formatif secara berkala untuk memetakan kebutuhan serta perkembangan belajar murid.\n3. Mengintegrasikan teknologi digital secara bijak guna memperkaya pengalaman belajar di kelas.\n4. Membangun kemitraan strategis dengan orang tua dan komunitas demi ekosistem belajar yang suportif.\n5. Berkomitmen pada pengembangan diri berkelanjutan melalui komunitas praktisi dan refleksi mandiri.',
     email: 'hana.permata@example.com',
     location: 'Jakarta, Indonesia',
     photoUrl: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=400'
@@ -22,6 +25,9 @@ export const About: React.FC = () => {
           title: data.title || 'Guru Pendidikan Dasar / SD',
           bio: data.bio || 'Seorang pendidik berdedikasi tinggi.',
           philosophy: data.philosophy || 'Saya percaya bahwa...',
+          visionIndonesia: data.vision_indonesia || 'Mewujudkan pendidikan Indonesia yang inklusif, merata, berpusat pada murid, serta melahirkan generasi yang berdaya cipta, bernalar kritis, dan berkarakter kuat sesuai Profil Pelajar Pancasila.',
+          visionTeacher: data.vision_teacher || 'Menjadi pendidik profesional yang reflektif, adaptif terhadap kemajuan teknologi pembelajaran, mengedepankan diferensiasi, serta senantiasa menghadirkan pembelajaran yang memanusiakan hubungan.',
+          mission: data.mission || '1. Merancang pembelajaran berdiferensiasi.\n2. Melakukan asesmen formatif berkala.\n3. Mengintegrasikan teknologi pembelajaran secara interaktif.',
           email: data.email || 'hana.permata@example.com',
           location: data.location || 'Jakarta, Indonesia',
           photoUrl: data.photo_url || 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=400'
@@ -32,45 +38,122 @@ export const About: React.FC = () => {
   }, []);
 
   const education = [
-    { year: '2025 - Sekarang', title: 'Program Profesi Guru (PPG)', institution: 'Universitas Negeri', description: 'Mengikuti program sertifikasi pendidik profesional.', color: 'bg-hana-yellow' },
-    { year: '2020 - 2024', title: 'S1 Pendidikan Guru', institution: 'Universitas Negeri', description: 'Lulus dengan Predikat Pujian (Cum Laude).', color: 'bg-hana-teal text-white' },
+    { year: '2025 - Sekarang', title: 'Program Profesi Guru (PPG)', institution: 'Universitas Negeri', description: 'Mengikuti program sertifikasi pendidik profesional Calon Guru.', color: 'bg-hana-yellow text-hana-navy' },
+    { year: '2020 - 2024', title: 'S1 Pendidikan Guru Sekolah Dasar (PGSD)', institution: 'Universitas Negeri', description: 'Lulus dengan Predikat Pujian (Cum Laude).', color: 'bg-hana-teal text-white' },
   ];
 
   return (
-    <div className="container mx-auto max-w-5xl px-4 py-8 space-y-12">
+    <div className="container mx-auto max-w-5xl px-4 py-8 space-y-10">
+      {/* Profil Header */}
       <section className="bg-white border-2 border-hana-navy rounded-hana p-8 shadow-brutal flex flex-col md:flex-row items-center gap-8">
         <div className="w-40 h-40 rounded-full bg-hana-pink border-2 border-hana-navy p-2 shrink-0 shadow-brutal-sm relative">
           <img src={profile.photoUrl} alt={profile.fullName} className="w-full h-full object-cover rounded-full border border-hana-navy" />
-          <span className="absolute bottom-1 right-1 bg-hana-yellow p-1.5 rounded-full border border-hana-navy"><Sparkles className="w-4 h-4 text-hana-navy" /></span>
+          <span className="absolute bottom-1 right-1 bg-hana-yellow p-1.5 rounded-full border border-hana-navy">
+            <Sparkles className="w-4 h-4 text-hana-navy" />
+          </span>
         </div>
         <div className="space-y-3 text-center md:text-left">
-          <div className="inline-block bg-hana-teal text-white text-xs font-bold px-3 py-1 rounded-full border border-hana-navy shadow-brutal-sm">👩‍🏫 {profile.title}</div>
+          <div className="inline-block bg-hana-teal text-white text-xs font-bold px-3 py-1 rounded-full border border-hana-navy shadow-brutal-sm">
+            👩‍🏫 {profile.title}
+          </div>
           <h1 className="text-3xl md:text-4xl font-extrabold text-hana-navy">{profile.fullName}</h1>
           <p className="text-slate-600 font-medium leading-relaxed">{profile.bio}</p>
           <div className="flex flex-wrap items-center justify-center md:justify-start gap-4 pt-2 text-sm font-bold">
-            <span className="flex items-center gap-1.5 text-slate-700"><MapPin className="w-4 h-4 text-hana-blue" /> {profile.location}</span>
-            <span className="flex items-center gap-1.5 text-slate-700"><Mail className="w-4 h-4 text-hana-pink" /> {profile.email}</span>
+            <span className="flex items-center gap-1.5 text-slate-700">
+              <MapPin className="w-4 h-4 text-hana-blue" /> {profile.location}
+            </span>
+            <span className="flex items-center gap-1.5 text-slate-700">
+              <Mail className="w-4 h-4 text-hana-pink" /> {profile.email}
+            </span>
           </div>
         </div>
       </section>
 
+      {/* Filosofi & Kompetensi */}
       <section className="grid grid-cols-1 md:grid-cols-12 gap-8">
         <div className="md:col-span-7 bg-hana-yellow border-2 border-hana-navy rounded-hana p-8 shadow-brutal space-y-4">
-          <div className="flex items-center gap-2 text-hana-navy font-extrabold text-xl"><Heart className="w-6 h-6 fill-hana-navy" /><h2>Filosofi Mengajar</h2></div>
-          <p className="text-hana-navy font-medium leading-relaxed">{profile.philosophy}</p>
+          <div className="flex items-center gap-2 text-hana-navy font-extrabold text-xl">
+            <Heart className="w-6 h-6 fill-hana-navy" />
+            <h2>Filosofi Mengajar</h2>
+          </div>
+          <p className="text-hana-navy font-medium leading-relaxed whitespace-pre-line">{profile.philosophy}</p>
         </div>
         <div className="md:col-span-5 bg-white border-2 border-hana-navy rounded-hana p-8 shadow-brutal space-y-4">
-          <div className="flex items-center gap-2 text-hana-navy font-extrabold text-xl"><Award className="w-6 h-6 text-hana-blue" /><h2>Kompetensi</h2></div>
+          <div className="flex items-center gap-2 text-hana-navy font-extrabold text-xl">
+            <Award className="w-6 h-6 text-hana-blue" />
+            <h2>Kompetensi Inti</h2>
+          </div>
           <div className="flex flex-wrap gap-2">
-            {['Manajemen Kelas', 'Kurikulum Merdeka', 'Design Thinking', 'Modul Ajar', 'Media Digital'].map((skill, index) => (
-              <span key={index} className="bg-slate-100 text-hana-navy text-xs font-bold px-3 py-1.5 rounded-full border border-hana-navy shadow-brutal-sm">{skill}</span>
+            {['Manajemen Kelas Berpusat Murid', 'Kurikulum Merdeka', 'Pembelajaran Berdiferensiasi', 'Social Emotional Learning (SEL)', 'Asesmen Otentik', 'Media Pembelajaran Digital'].map((skill, index) => (
+              <span key={index} className="bg-slate-100 text-hana-navy text-xs font-bold px-3 py-1.5 rounded-full border border-hana-navy shadow-brutal-sm">
+                {skill}
+              </span>
             ))}
           </div>
         </div>
       </section>
 
+      {/* Visi Pendidikan Indonesia & Visi Guru Profesional */}
+      <section className="grid grid-cols-1 md:grid-cols-2 gap-8">
+        {/* Visi untuk Pendidikan Indonesia */}
+        <div className="bg-white border-2 border-hana-navy rounded-hana p-8 shadow-brutal space-y-4 relative overflow-hidden">
+          <div className="w-12 h-12 rounded-2xl bg-teal-100 border-2 border-hana-navy flex items-center justify-center text-teal-700 shadow-brutal-sm">
+            <Compass className="w-6 h-6" />
+          </div>
+          <div>
+            <span className="text-[11px] font-black uppercase text-teal-700 tracking-wider">Arah & Harapan Bangsa</span>
+            <h2 className="text-2xl font-black text-hana-navy mt-1">Visi untuk Pendidikan Indonesia</h2>
+          </div>
+          <p className="text-slate-700 font-medium leading-relaxed whitespace-pre-line text-sm">
+            {profile.visionIndonesia}
+          </p>
+        </div>
+
+        {/* Visi sebagai Calon Guru Profesional */}
+        <div className="bg-white border-2 border-hana-navy rounded-hana p-8 shadow-brutal space-y-4 relative overflow-hidden">
+          <div className="w-12 h-12 rounded-2xl bg-amber-100 border-2 border-hana-navy flex items-center justify-center text-amber-700 shadow-brutal-sm">
+            <Sparkles className="w-6 h-6" />
+          </div>
+          <div>
+            <span className="text-[11px] font-black uppercase text-amber-700 tracking-wider">Komitmen Keprofesian</span>
+            <h2 className="text-2xl font-black text-hana-navy mt-1">Visi Calon Guru Profesional</h2>
+          </div>
+          <p className="text-slate-700 font-medium leading-relaxed whitespace-pre-line text-sm">
+            {profile.visionTeacher}
+          </p>
+        </div>
+      </section>
+
+      {/* Misi Guru Profesional */}
       <section className="bg-white border-2 border-hana-navy rounded-hana p-8 shadow-brutal space-y-6">
-        <div className="flex items-center gap-2 text-hana-navy font-extrabold text-2xl"><GraduationCap className="w-7 h-7 text-hana-teal" /><h2>Riwayat Pendidikan</h2></div>
+        <div className="flex items-center gap-3">
+          <div className="w-12 h-12 rounded-2xl bg-hana-pink text-white border-2 border-hana-navy flex items-center justify-center shadow-brutal-sm">
+            <Target className="w-6 h-6" />
+          </div>
+          <div>
+            <span className="text-[11px] font-black uppercase text-hana-pink tracking-wider">Langkah Konkret</span>
+            <h2 className="text-2xl font-black text-hana-navy">Misi Guru Profesional</h2>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 gap-3">
+          {profile.mission.split('\n').filter(line => line.trim().length > 0).map((item, idx) => (
+            <div key={idx} className="flex items-start gap-3 p-4 bg-slate-50 border-2 border-hana-navy rounded-xl shadow-brutal-sm">
+              <CheckCircle2 className="w-5 h-5 text-hana-teal shrink-0 mt-0.5" />
+              <p className="text-sm font-semibold text-hana-navy leading-relaxed">
+                {item.replace(/^\d+[\.\)]\s*/, '')}
+              </p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* Riwayat Pendidikan */}
+      <section className="bg-white border-2 border-hana-navy rounded-hana p-8 shadow-brutal space-y-6">
+        <div className="flex items-center gap-2 text-hana-navy font-extrabold text-2xl">
+          <GraduationCap className="w-7 h-7 text-hana-teal" />
+          <h2>Riwayat Pendidikan</h2>
+        </div>
         <div className="space-y-6">
           {education.map((edu, idx) => (
             <div key={idx} className="border-2 border-hana-navy rounded-2xl p-6 shadow-brutal-sm space-y-2 relative overflow-hidden bg-slate-50">
