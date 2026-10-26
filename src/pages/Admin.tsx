@@ -1,10 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import { 
   Lock, LogOut, LayoutDashboard, BookOpen, User, FolderOpen, 
-  ArrowRight, Plus, Trash2, Save, CheckCircle2, FileText, Sparkles, UploadCloud, Pencil, X, Mail, Layers, Compass, Target
+  ArrowRight, Plus, Trash2, Save, CheckCircle2, FileText, Sparkles, UploadCloud, Pencil, X, Mail, Layers, Compass, Target,
+  MapPin, GraduationCap, IdCard
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import type { Course } from '../types/ppg';
+
+interface EducationItem {
+  year: string;
+  title: string;
+  institution: string;
+  description: string;
+  color?: string;
+}
 
 const Admin: React.FC = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -15,7 +24,7 @@ const Admin: React.FC = () => {
   const [courses, setCourses] = useState<Course[]>([]);
   const [messages, setMessages] = useState<any[]>([]);
 
-  // State Profil (Termasuk Visi & Misi)
+  // State Profil & Biodata Lengkap
   const [profileId, setProfileId] = useState<string | null>(null);
   const [profile, setProfile] = useState({ 
     fullName: '', 
@@ -27,10 +36,32 @@ const Admin: React.FC = () => {
     mission: '', 
     email: '', 
     location: '', 
-    photoUrl: '' 
+    photoUrl: '',
+    nim: '',
+    bidangStudi: '',
+    lptk: '',
+    ttl: '',
+    phone: '',
+    gender: '',
+    competencies: ''
   });
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+
+  // State Riwayat Pendidikan
+  const [educationList, setEducationList] = useState<EducationItem[]>([
+    { year: '2025 - Sekarang', title: 'Program Profesi Guru (PPG)', institution: 'Universitas Negeri', description: 'Mengikuti program sertifikasi pendidik profesional Calon Guru.', color: 'bg-hana-yellow text-hana-navy' },
+    { year: '2020 - 2024', title: 'S1 Pendidikan Guru Sekolah Dasar (PGSD)', institution: 'Universitas Negeri', description: 'Lulus dengan Predikat Pujian (Cum Laude).', color: 'bg-hana-teal text-white' },
+  ]);
+  const [newEduYear, setNewEduYear] = useState('');
+  const [newEduTitle, setNewEduTitle] = useState('');
+  const [newEduInstitution, setNewEduInstitution] = useState('');
+  const [newEduDesc, setNewEduDesc] = useState('');
+  const [editingEduIndex, setEditingEduIndex] = useState<number | null>(null);
+  const [editEduYear, setEditEduYear] = useState('');
+  const [editEduTitle, setEditEduTitle] = useState('');
+  const [editEduInstitution, setEditEduInstitution] = useState('');
+  const [editEduDesc, setEditEduDesc] = useState('');
 
   // State Matkul
   const [newCourseCode, setNewCourseCode] = useState('');
@@ -85,8 +116,18 @@ const Admin: React.FC = () => {
         mission: data.mission || '',
         email: data.email || '', 
         location: data.location || '', 
-        photoUrl: data.photo_url || '' 
+        photoUrl: data.photo_url || '',
+        nim: data.nim || '',
+        bidangStudi: data.bidang_studi || '',
+        lptk: data.lptk || '',
+        ttl: data.ttl || '',
+        phone: data.phone || '',
+        gender: data.gender || '',
+        competencies: data.competencies || ''
       });
+      if (data.education_history && Array.isArray(data.education_history) && data.education_history.length > 0) {
+        setEducationList(data.education_history);
+      }
     }
   };
 
@@ -160,7 +201,7 @@ const Admin: React.FC = () => {
     }
   };
 
-  // PROFIL CRUD
+  // PROFIL & BIODATA CRUD
   const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
     let currentPhotoUrl = profile.photoUrl;
@@ -179,7 +220,8 @@ const Admin: React.FC = () => {
       setImageFile(null); 
       setProfile(prev => ({ ...prev, photoUrl: currentPhotoUrl }));
     }
-    const payload = { 
+
+    const payload: any = { 
       full_name: profile.fullName, 
       title: profile.title, 
       bio: profile.bio, 
@@ -189,16 +231,87 @@ const Admin: React.FC = () => {
       mission: profile.mission,
       email: profile.email, 
       location: profile.location, 
-      photo_url: currentPhotoUrl, 
+      photo_url: currentPhotoUrl,
+      nim: profile.nim,
+      bidang_studi: profile.bidangStudi,
+      lptk: profile.lptk,
+      ttl: profile.ttl,
+      phone: profile.phone,
+      gender: profile.gender,
+      competencies: profile.competencies,
+      education_history: educationList,
       updated_at: new Date().toISOString() 
     };
-    if (profileId) {
-      await supabase.from('profiles').update(payload).eq('id', profileId);
-    } else { 
-      const { data } = await supabase.from('profiles').insert([payload]).select().single(); 
-      if (data) setProfileId(data.id); 
+
+    try {
+      if (profileId) {
+        const { error } = await supabase.from('profiles').update(payload).eq('id', profileId);
+        if (error) {
+          // Fallback jika kolom baru belum dimigrasi di PostgreSQL
+          const fallbackPayload = {
+            full_name: profile.fullName,
+            title: profile.title,
+            bio: profile.bio,
+            philosophy: profile.philosophy,
+            email: profile.email,
+            location: profile.location,
+            photo_url: currentPhotoUrl,
+            updated_at: new Date().toISOString()
+          };
+          await supabase.from('profiles').update(fallbackPayload).eq('id', profileId);
+          showToast('Profil dasar tersimpan! (Jalankan SQL migration untuk biodata lengkap)');
+          return;
+        }
+      } else { 
+        const { data, error } = await supabase.from('profiles').insert([payload]).select().single(); 
+        if (data) setProfileId(data.id); 
+        if (error) throw error;
+      }
+      showToast('Biodata, Profil & Visi Misi berhasil disimpan!');
+    } catch (err: any) {
+      alert('Gagal menyimpan profil: ' + (err.message || 'Error'));
     }
-    showToast('Profil dan Visi Misi berhasil disimpan!');
+  };
+
+  // RIWAYAT PENDIDIKAN CRUD
+  const handleAddEducation = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newEduYear || !newEduTitle) return;
+    const newItem: EducationItem = {
+      year: newEduYear,
+      title: newEduTitle,
+      institution: newEduInstitution || '-',
+      description: newEduDesc || '-',
+      color: 'bg-hana-yellow text-hana-navy'
+    };
+    setEducationList([...educationList, newItem]);
+    setNewEduYear('');
+    setNewEduTitle('');
+    setNewEduInstitution('');
+    setNewEduDesc('');
+    showToast('Riwayat pendidikan ditambahkan!');
+  };
+
+  const handleUpdateEducation = (index: number) => {
+    const updated = [...educationList];
+    updated[index] = {
+      ...updated[index],
+      year: editEduYear,
+      title: editEduTitle,
+      institution: editEduInstitution,
+      description: editEduDesc
+    };
+    setEducationList(updated);
+    setEditingEduIndex(null);
+    showToast('Riwayat pendidikan diperbarui!');
+  };
+
+  const handleDeleteEducation = (index: number) => {
+    if (confirm('Yakin ingin menghapus riwayat pendidikan ini?')) {
+      const updated = educationList.filter((_, i) => i !== index);
+      setEducationList(updated);
+      showToast('Riwayat pendidikan dihapus.');
+    }
   };
 
   // MATKUL CRUD
@@ -366,7 +479,7 @@ const Admin: React.FC = () => {
             />
             <button 
               type="submit" 
-              className="w-full py-3.5 bg-hana-yellow text-hana-navy font-black rounded-xl border-2 border-hana-navy shadow-brutal hover:bg-yellow-300 transition-all flex items-center justify-center gap-2"
+              className="w-full py-3.5 bg-hana-yellow text-hana-navy font-black rounded-xl border-2 border-hana-navy shadow-brutal hover:bg-yellow-300 transition-all flex items-center justify-center gap-2 cursor-pointer"
             >
               Buka Panel CMS <ArrowRight className="w-4 h-4" />
             </button>
@@ -378,7 +491,7 @@ const Admin: React.FC = () => {
 
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    { id: 'profil', label: 'Profil, Visi & Misi', icon: User },
+    { id: 'profil', label: 'Biodata & Profil', icon: User },
     { id: 'matkul', label: 'Mata Kuliah', icon: BookOpen },
     { id: 'topik', label: 'Kelola Topik', icon: Layers },
     { id: 'artefak', label: 'Kelola Artefak', icon: FolderOpen },
@@ -405,7 +518,7 @@ const Admin: React.FC = () => {
               <button 
                 key={item.id} 
                 onClick={() => setActiveTab(item.id as any)} 
-                className={`flex items-center justify-between px-4 py-3 rounded-xl font-extrabold border-2 transition-all text-left ${
+                className={`flex items-center justify-between px-4 py-3 rounded-xl font-extrabold border-2 transition-all text-left cursor-pointer ${
                   activeTab === item.id 
                     ? 'bg-white border-hana-navy text-hana-navy shadow-brutal-sm translate-x-2' 
                     : 'border-transparent text-slate-600 hover:bg-white/50'
@@ -420,7 +533,7 @@ const Admin: React.FC = () => {
           </nav>
           <button 
             onClick={() => setIsAuthenticated(false)} 
-            className="flex items-center gap-3 px-4 py-3 rounded-xl font-bold text-rose-600 border-2 border-transparent hover:bg-rose-50 w-full text-left mt-auto"
+            className="flex items-center gap-3 px-4 py-3 rounded-xl font-bold text-rose-600 border-2 border-transparent hover:bg-rose-50 w-full text-left mt-auto cursor-pointer"
           >
             <LogOut className="w-5 h-5" /> Keluar Panel
           </button>
@@ -451,15 +564,18 @@ const Admin: React.FC = () => {
             </div>
           )}
 
-          {/* TAB PROFIL & VISI MISI */}
+          {/* TAB BIODATA, PROFIL & VISI MISI */}
           {activeTab === 'profil' && (
-            <div className="space-y-6">
+            <div className="space-y-8">
               <div className="border-b-2 border-hana-navy pb-4 flex justify-between items-center">
-                <h2 className="text-2xl font-black text-hana-navy">Profil, Visi & Misi</h2>
+                <div>
+                  <h2 className="text-2xl font-black text-hana-navy">Kelola Biodata Diri & Profil</h2>
+                  <p className="text-xs font-semibold text-slate-500 mt-0.5">Ubah identitas resmi PPG, biodata diri, riwayat pendidikan, serta visi dan misi.</p>
+                </div>
               </div>
 
               <form onSubmit={handleSaveProfile} className="space-y-6">
-                {/* Bagian Foto Profil */}
+                {/* 1. Foto Profil */}
                 <div className="bg-slate-50 border-2 border-hana-navy p-5 rounded-2xl shadow-brutal-sm flex flex-col md:flex-row items-center gap-6">
                   <div className="w-24 h-24 rounded-full bg-slate-200 border-2 border-hana-navy overflow-hidden shrink-0">
                     {imageFile ? (
@@ -481,90 +597,194 @@ const Admin: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Informasi Identitas */}
+                {/* 2. Biodata Resmi Mahasiswa PPG */}
                 <div className="bg-slate-50 border-2 border-hana-navy p-5 rounded-2xl space-y-4 shadow-brutal-sm">
-                  <h3 className="font-black text-sm text-hana-navy flex items-center gap-2"><User className="w-4 h-4 text-hana-blue"/> Identitas Diri</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <h3 className="font-black text-sm text-hana-navy flex items-center gap-2">
+                    <IdCard className="w-4 h-4 text-hana-blue"/> Biodata Resmi Mahasiswa PPG
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div>
                       <label className="block text-xs font-extrabold text-hana-navy mb-1">Nama Lengkap & Gelar</label>
-                      <input type="text" value={profile.fullName} onChange={(e) => setProfile({ ...profile, fullName: e.target.value })} className="w-full px-4 py-2.5 rounded-xl border-2 border-hana-navy font-bold text-sm bg-white" />
+                      <input type="text" value={profile.fullName} onChange={(e) => setProfile({ ...profile, fullName: e.target.value })} className="w-full px-4 py-2.5 rounded-xl border-2 border-hana-navy font-bold text-sm bg-white" placeholder="e.g. Hana Permata, S.Pd." />
                     </div>
                     <div>
+                      <label className="block text-xs font-extrabold text-hana-navy mb-1">NIM PPG / No. Peserta</label>
+                      <input type="text" value={profile.nim} onChange={(e) => setProfile({ ...profile, nim: e.target.value })} className="w-full px-4 py-2.5 rounded-xl border-2 border-hana-navy font-bold text-sm bg-white" placeholder="e.g. 20240912345" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-extrabold text-hana-navy mb-1">Bidang Studi PPG</label>
+                      <input type="text" value={profile.bidangStudi} onChange={(e) => setProfile({ ...profile, bidangStudi: e.target.value })} className="w-full px-4 py-2.5 rounded-xl border-2 border-hana-navy font-bold text-sm bg-white" placeholder="e.g. Pendidikan Guru Sekolah Dasar (PGSD)" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-extrabold text-hana-navy mb-1">LPTK / Perguruan Tinggi</label>
+                      <input type="text" value={profile.lptk} onChange={(e) => setProfile({ ...profile, lptk: e.target.value })} className="w-full px-4 py-2.5 rounded-xl border-2 border-hana-navy font-bold text-sm bg-white" placeholder="e.g. Universitas Negeri Yogyakarta" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-extrabold text-hana-navy mb-1">Tempat, Tanggal Lahir (TTL)</label>
+                      <input type="text" value={profile.ttl} onChange={(e) => setProfile({ ...profile, ttl: e.target.value })} className="w-full px-4 py-2.5 rounded-xl border-2 border-hana-navy font-bold text-sm bg-white" placeholder="e.g. Jakarta, 15 Mei 1999" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-extrabold text-hana-navy mb-1">Jenis Kelamin</label>
+                      <select value={profile.gender} onChange={(e) => setProfile({ ...profile, gender: e.target.value })} className="w-full px-4 py-2.5 rounded-xl border-2 border-hana-navy font-bold text-sm bg-white">
+                        <option value="">-- Pilih Jenis Kelamin --</option>
+                        <option value="Perempuan">Perempuan</option>
+                        <option value="Laki-laki">Laki-laki</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 3. Kontak & Domisili */}
+                <div className="bg-slate-50 border-2 border-hana-navy p-5 rounded-2xl space-y-4 shadow-brutal-sm">
+                  <h3 className="font-black text-sm text-hana-navy flex items-center gap-2">
+                    <MapPin className="w-4 h-4 text-hana-teal"/> Kontak & Informasi Tambahan
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
                       <label className="block text-xs font-extrabold text-hana-navy mb-1">Status / Subtitle</label>
-                      <input type="text" value={profile.title} onChange={(e) => setProfile({ ...profile, title: e.target.value })} className="w-full px-4 py-2.5 rounded-xl border-2 border-hana-navy font-bold text-sm bg-white" />
+                      <input type="text" value={profile.title} onChange={(e) => setProfile({ ...profile, title: e.target.value })} className="w-full px-4 py-2.5 rounded-xl border-2 border-hana-navy font-bold text-sm bg-white" placeholder="e.g. Mahasiswa PPG Calon Guru" />
                     </div>
                     <div>
                       <label className="block text-xs font-extrabold text-hana-navy mb-1">Email</label>
-                      <input type="email" value={profile.email} onChange={(e) => setProfile({ ...profile, email: e.target.value })} className="w-full px-4 py-2.5 rounded-xl border-2 border-hana-navy font-bold text-sm bg-white" />
+                      <input type="email" value={profile.email} onChange={(e) => setProfile({ ...profile, email: e.target.value })} className="w-full px-4 py-2.5 rounded-xl border-2 border-hana-navy font-bold text-sm bg-white" placeholder="e.g. nama@gmail.com" />
                     </div>
                     <div>
-                      <label className="block text-xs font-extrabold text-hana-navy mb-1">Lokasi</label>
-                      <input type="text" value={profile.location} onChange={(e) => setProfile({ ...profile, location: e.target.value })} className="w-full px-4 py-2.5 rounded-xl border-2 border-hana-navy font-bold text-sm bg-white" />
+                      <label className="block text-xs font-extrabold text-hana-navy mb-1">No. WhatsApp / HP</label>
+                      <input type="text" value={profile.phone} onChange={(e) => setProfile({ ...profile, phone: e.target.value })} className="w-full px-4 py-2.5 rounded-xl border-2 border-hana-navy font-bold text-sm bg-white" placeholder="e.g. +62 812-3456-7890" />
+                    </div>
+                    <div className="md:col-span-3">
+                      <label className="block text-xs font-extrabold text-hana-navy mb-1">Domisili / Lokasi</label>
+                      <input type="text" value={profile.location} onChange={(e) => setProfile({ ...profile, location: e.target.value })} className="w-full px-4 py-2.5 rounded-xl border-2 border-hana-navy font-bold text-sm bg-white" placeholder="e.g. Jakarta, Indonesia" />
                     </div>
                   </div>
                   <div>
                     <label className="block text-xs font-extrabold text-hana-navy mb-1">Biografi Singkat</label>
-                    <textarea rows={2} value={profile.bio} onChange={(e) => setProfile({ ...profile, bio: e.target.value })} className="w-full px-4 py-2.5 rounded-xl border-2 border-hana-navy font-medium text-sm bg-white resize-none"></textarea>
+                    <textarea rows={2} value={profile.bio} onChange={(e) => setProfile({ ...profile, bio: e.target.value })} className="w-full px-4 py-2.5 rounded-xl border-2 border-hana-navy font-medium text-sm bg-white resize-none" placeholder="Tuliskan biografi singkat..."></textarea>
                   </div>
+                  <div>
+                    <label className="block text-xs font-extrabold text-hana-navy mb-1">Kompetensi Utama (Pisahkan dengan tanda koma)</label>
+                    <input type="text" value={profile.competencies} onChange={(e) => setProfile({ ...profile, competencies: e.target.value })} className="w-full px-4 py-2.5 rounded-xl border-2 border-hana-navy font-bold text-sm bg-white" placeholder="e.g. Manajemen Kelas, Kurikulum Merdeka, Pembelajaran Berdiferensiasi, Asesmen Otentik" />
+                  </div>
+                </div>
+
+                {/* 4. Filosofi & Visi Misi */}
+                <div className="bg-slate-50 border-2 border-hana-navy p-5 rounded-2xl space-y-4 shadow-brutal-sm">
+                  <h3 className="font-black text-sm text-hana-navy flex items-center gap-2">
+                    <Target className="w-4 h-4 text-hana-pink"/> Filosofi Mengajar, Visi & Misi
+                  </h3>
                   <div>
                     <label className="block text-xs font-extrabold text-hana-navy mb-1">Filosofi Mengajar (Ki Hajar Dewantara)</label>
                     <textarea rows={3} value={profile.philosophy} onChange={(e) => setProfile({ ...profile, philosophy: e.target.value })} className="w-full px-4 py-2.5 rounded-xl border-2 border-hana-navy font-medium text-sm bg-white resize-none"></textarea>
                   </div>
-                </div>
-
-                {/* Visi & Misi Guru Profesional */}
-                <div className="bg-slate-50 border-2 border-hana-navy p-5 rounded-2xl space-y-4 shadow-brutal-sm">
-                  <h3 className="font-black text-sm text-hana-navy flex items-center gap-2"><Target className="w-4 h-4 text-hana-pink"/> Visi & Misi Guru</h3>
-                  
                   <div>
                     <label className="block text-xs font-extrabold text-hana-navy mb-1 flex items-center gap-1.5">
                       <Compass className="w-3.5 h-3.5 text-hana-teal" /> Visi untuk Pendidikan Indonesia
                     </label>
-                    <textarea 
-                      rows={3} 
-                      placeholder="Contoh: Mewujudkan pendidikan Indonesia yang inklusif, merata, berpusat pada murid, serta melahirkan generasi yang bernalar kritis dan berkarakter Profil Pelajar Pancasila." 
-                      value={profile.visionIndonesia} 
-                      onChange={(e) => setProfile({ ...profile, visionIndonesia: e.target.value })} 
-                      className="w-full px-4 py-2.5 rounded-xl border-2 border-hana-navy font-medium text-sm bg-white resize-none"
-                    ></textarea>
+                    <textarea rows={3} value={profile.visionIndonesia} onChange={(e) => setProfile({ ...profile, visionIndonesia: e.target.value })} className="w-full px-4 py-2.5 rounded-xl border-2 border-hana-navy font-medium text-sm bg-white resize-none"></textarea>
                   </div>
-
                   <div>
                     <label className="block text-xs font-extrabold text-hana-navy mb-1 flex items-center gap-1.5">
                       <Sparkles className="w-3.5 h-3.5 text-hana-yellow" /> Visi sebagai Calon Guru Profesional
                     </label>
-                    <textarea 
-                      rows={3} 
-                      placeholder="Contoh: Menjadi pendidik yang reflektif, adaptif terhadap kemajuan teknologi pembelajaran, mengedepankan pendekatan berdiferensiasi dan berorientasi pada kesejahteraan murid (well-being)." 
-                      value={profile.visionTeacher} 
-                      onChange={(e) => setProfile({ ...profile, visionTeacher: e.target.value })} 
-                      className="w-full px-4 py-2.5 rounded-xl border-2 border-hana-navy font-medium text-sm bg-white resize-none"
-                    ></textarea>
+                    <textarea rows={3} value={profile.visionTeacher} onChange={(e) => setProfile({ ...profile, visionTeacher: e.target.value })} className="w-full px-4 py-2.5 rounded-xl border-2 border-hana-navy font-medium text-sm bg-white resize-none"></textarea>
                   </div>
-
                   <div>
                     <label className="block text-xs font-extrabold text-hana-navy mb-1 flex items-center gap-1.5">
                       <Target className="w-3.5 h-3.5 text-hana-blue" /> Misi Guru Profesional
                     </label>
-                    <textarea 
-                      rows={4} 
-                      placeholder="Tuliskan misi per poin (1. Merancang pembelajaran yang menarik, 2. Melakukan asesmen diagnostik berkelanjutan, dst)" 
-                      value={profile.mission} 
-                      onChange={(e) => setProfile({ ...profile, mission: e.target.value })} 
-                      className="w-full px-4 py-2.5 rounded-xl border-2 border-hana-navy font-medium text-sm bg-white resize-none"
-                    ></textarea>
+                    <textarea rows={4} value={profile.mission} onChange={(e) => setProfile({ ...profile, mission: e.target.value })} className="w-full px-4 py-2.5 rounded-xl border-2 border-hana-navy font-medium text-sm bg-white resize-none" placeholder="Tuliskan misi per baris / poin"></textarea>
                   </div>
                 </div>
 
                 <button 
                   type="submit" 
                   disabled={isUploading} 
-                  className="px-6 py-3 bg-hana-blue text-white font-black text-sm rounded-xl border-2 border-hana-navy shadow-brutal hover:bg-blue-600 disabled:opacity-50 flex items-center gap-2 cursor-pointer"
+                  className="px-6 py-3.5 bg-hana-blue text-white font-black text-sm rounded-xl border-2 border-hana-navy shadow-brutal hover:bg-blue-600 disabled:opacity-50 flex items-center gap-2 cursor-pointer"
                 >
                   {isUploading ? <UploadCloud className="w-4 h-4 animate-bounce" /> : <Save className="w-4 h-4" />} 
-                  {isUploading ? 'Menyimpan...' : 'Simpan Semua Perubahan Profil & Visi Misi'}
+                  {isUploading ? 'Menyimpan...' : 'Simpan Semua Biodata, Profil & Visi Misi'}
                 </button>
               </form>
+
+              {/* 5. Kelola Riwayat Pendidikan */}
+              <div className="bg-slate-50 border-2 border-hana-navy p-5 rounded-2xl space-y-5 shadow-brutal-sm mt-8">
+                <div className="flex items-center justify-between border-b-2 border-hana-navy pb-3">
+                  <h3 className="font-black text-sm text-hana-navy flex items-center gap-2">
+                    <GraduationCap className="w-4 h-4 text-hana-teal"/> Kelola Riwayat Pendidikan
+                  </h3>
+                </div>
+
+                {/* Form Tambah Riwayat Pendidikan */}
+                <form onSubmit={handleAddEducation} className="space-y-3 bg-white p-4 rounded-xl border-2 border-dashed border-hana-navy">
+                  <span className="text-xs font-black uppercase text-hana-navy flex items-center gap-1">
+                    <Plus className="w-3.5 h-3.5" /> Tambah Jenjang Pendidikan Baru
+                  </span>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <input type="text" placeholder="Tahun (e.g. 2020 - 2024)" value={newEduYear} onChange={e => setNewEduYear(e.target.value)} className="px-3 py-2 rounded-xl border-2 border-hana-navy text-xs font-bold" />
+                    <input type="text" placeholder="Gelar / Jenjang (e.g. S1 PGSD)" value={newEduTitle} onChange={e => setNewEduTitle(e.target.value)} className="px-3 py-2 rounded-xl border-2 border-hana-navy text-xs font-bold" />
+                    <input type="text" placeholder="Nama Universitas / Institusi" value={newEduInstitution} onChange={e => setNewEduInstitution(e.target.value)} className="px-3 py-2 rounded-xl border-2 border-hana-navy text-xs font-bold" />
+                  </div>
+                  <input type="text" placeholder="Keterangan singkat / Prestasi (e.g. Lulus dengan Pujian Cum Laude)" value={newEduDesc} onChange={e => setNewEduDesc(e.target.value)} className="w-full px-3 py-2 rounded-xl border-2 border-hana-navy text-xs font-medium" />
+                  <button type="submit" className="px-4 py-2 bg-hana-yellow text-hana-navy font-black text-xs rounded-xl border-2 border-hana-navy shadow-brutal-sm cursor-pointer hover:bg-yellow-300">
+                    Tambah ke Daftar
+                  </button>
+                </form>
+
+                {/* List Riwayat Pendidikan */}
+                <div className="space-y-3">
+                  {educationList.map((edu, idx) => (
+                    <div key={idx} className="bg-white border-2 border-hana-navy p-4 rounded-xl shadow-brutal-sm">
+                      {editingEduIndex === idx ? (
+                        <div className="space-y-2">
+                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                            <input type="text" value={editEduYear} onChange={e => setEditEduYear(e.target.value)} className="px-3 py-1.5 text-xs font-bold border-2 border-hana-navy rounded-lg" placeholder="Tahun" />
+                            <input type="text" value={editEduTitle} onChange={e => setEditEduTitle(e.target.value)} className="px-3 py-1.5 text-xs font-bold border-2 border-hana-navy rounded-lg" placeholder="Gelar / Jenjang" />
+                            <input type="text" value={editEduInstitution} onChange={e => setEditEduInstitution(e.target.value)} className="px-3 py-1.5 text-xs font-bold border-2 border-hana-navy rounded-lg" placeholder="Institusi" />
+                          </div>
+                          <input type="text" value={editEduDesc} onChange={e => setEditEduDesc(e.target.value)} className="w-full px-3 py-1.5 text-xs font-medium border-2 border-hana-navy rounded-lg" placeholder="Keterangan" />
+                          <div className="flex gap-2 pt-1">
+                            <button onClick={() => handleUpdateEducation(idx)} className="px-3 py-1.5 bg-hana-teal text-white font-bold text-xs border-2 border-hana-navy rounded-lg cursor-pointer">Simpan</button>
+                            <button onClick={() => setEditingEduIndex(null)} className="px-3 py-1.5 bg-rose-100 text-rose-600 font-bold text-xs border-2 border-hana-navy rounded-lg cursor-pointer">Batal</button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="flex items-start justify-between gap-4">
+                          <div>
+                            <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded bg-hana-yellow border border-hana-navy">
+                              {edu.year}
+                            </span>
+                            <h4 className="font-extrabold text-sm text-hana-navy mt-1">{edu.title}</h4>
+                            <p className="text-xs font-bold text-hana-blue">{edu.institution}</p>
+                            <p className="text-xs text-slate-500 mt-0.5">{edu.description}</p>
+                          </div>
+                          <div className="flex items-center gap-2 shrink-0">
+                            <button 
+                              onClick={() => {
+                                setEditingEduIndex(idx);
+                                setEditEduYear(edu.year);
+                                setEditEduTitle(edu.title);
+                                setEditEduInstitution(edu.institution);
+                                setEditEduDesc(edu.description);
+                              }}
+                              className="p-1.5 text-hana-blue border border-hana-navy rounded-lg hover:bg-slate-50 cursor-pointer" 
+                              title="Edit"
+                            >
+                              <Pencil className="w-4 h-4" />
+                            </button>
+                            <button 
+                              onClick={() => handleDeleteEducation(idx)} 
+                              className="p-1.5 text-rose-600 border border-hana-navy rounded-lg hover:bg-rose-50 cursor-pointer" 
+                              title="Hapus"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
           )}
 
