@@ -40,6 +40,17 @@ export const About: React.FC = () => {
   ]);
 
   useEffect(() => {
+    // 1. Baca cache lokal terlebih dahulu
+    const localEdu = localStorage.getItem('hana_education_history');
+    if (localEdu) {
+      try {
+        const parsed = JSON.parse(localEdu);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setEducation(parsed);
+        }
+      } catch (e) {}
+    }
+
     const fetchProfile = async () => {
       const { data } = await supabase.from('profiles').select('*').limit(1).maybeSingle();
       if (data) {
@@ -65,6 +76,7 @@ export const About: React.FC = () => {
 
         if (data.education_history && Array.isArray(data.education_history) && data.education_history.length > 0) {
           setEducation(data.education_history);
+          localStorage.setItem('hana_education_history', JSON.stringify(data.education_history));
         }
       }
     };

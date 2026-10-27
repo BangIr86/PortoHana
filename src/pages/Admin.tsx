@@ -127,6 +127,17 @@ const Admin: React.FC = () => {
       });
       if (data.education_history && Array.isArray(data.education_history) && data.education_history.length > 0) {
         setEducationList(data.education_history);
+        localStorage.setItem('hana_education_history', JSON.stringify(data.education_history));
+      } else {
+        const localEdu = localStorage.getItem('hana_education_history');
+        if (localEdu) {
+          try {
+            const parsed = JSON.parse(localEdu);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              setEducationList(parsed);
+            }
+          } catch (e) {}
+        }
       }
     }
   };
@@ -273,8 +284,28 @@ const Admin: React.FC = () => {
     }
   };
 
-  // RIWAYAT PENDIDIKAN CRUD
-  const handleAddEducation = (e: React.FormEvent) => {
+  // RIWAYAT PENDIDIKAN CRUD (Auto-Save langsung ke Supabase & LocalStorage)
+  const syncEducationToStorage = async (newList: EducationItem[]) => {
+    setEducationList(newList);
+    localStorage.setItem('hana_education_history', JSON.stringify(newList));
+
+    if (profileId) {
+      try {
+        const { error } = await supabase.from('profiles').update({
+          education_history: newList,
+          updated_at: new Date().toISOString()
+        }).eq('id', profileId);
+
+        if (error) {
+          console.warn('Kolom education_history mungkin belum ada di Supabase:', error.message);
+        }
+      } catch (err) {
+        console.error('Gagal sync ke Supabase:', err);
+      }
+    }
+  };
+
+  const handleAddEducation = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newEduYear || !newEduTitle) return;
     const newItem: EducationItem = {
@@ -284,15 +315,16 @@ const Admin: React.FC = () => {
       description: newEduDesc || '-',
       color: 'bg-hana-yellow text-hana-navy'
     };
-    setEducationList([...educationList, newItem]);
+    const updated = [...educationList, newItem];
+    await syncEducationToStorage(updated);
     setNewEduYear('');
     setNewEduTitle('');
     setNewEduInstitution('');
     setNewEduDesc('');
-    showToast('Riwayat pendidikan ditambahkan!');
+    showToast('Riwayat pendidikan berhasil ditambahkan & disimpan!');
   };
 
-  const handleUpdateEducation = (index: number) => {
+  const handleUpdateEducation = async (index: number) => {
     const updated = [...educationList];
     updated[index] = {
       ...updated[index],
@@ -301,16 +333,16 @@ const Admin: React.FC = () => {
       institution: editEduInstitution,
       description: editEduDesc
     };
-    setEducationList(updated);
+    await syncEducationToStorage(updated);
     setEditingEduIndex(null);
-    showToast('Riwayat pendidikan diperbarui!');
+    showToast('Riwayat pendidikan berhasil diperbarui & disimpan!');
   };
 
-  const handleDeleteEducation = (index: number) => {
+  const handleDeleteEducation = async (index: number) => {
     if (confirm('Yakin ingin menghapus riwayat pendidikan ini?')) {
       const updated = educationList.filter((_, i) => i !== index);
-      setEducationList(updated);
-      showToast('Riwayat pendidikan dihapus.');
+      await syncEducationToStorage(updated);
+      showToast('Riwayat pendidikan berhasil dihapus & disimpan!');
     }
   };
 

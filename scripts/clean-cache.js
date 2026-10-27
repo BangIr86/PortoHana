@@ -25,3 +25,4 @@ for (const target of cacheTargets) {
 }
 
 console.log('✨ Selesai: Semua cache berhasil dibersihkan.');
+
