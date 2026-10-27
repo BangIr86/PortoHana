@@ -18,7 +18,7 @@ interface EducationItem {
 const Admin: React.FC = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [passcode, setPasscode] = useState('');
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'profil' | 'matkul' | 'topik' | 'artefak' | 'refleksi' | 'pesan'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'profil' | 'pendidikan' | 'matkul' | 'topik' | 'artefak' | 'refleksi' | 'pesan'>('dashboard');
   const [notification, setNotification] = useState<string | null>(null);
 
   const [courses, setCourses] = useState<Course[]>([]);
@@ -524,6 +524,7 @@ const Admin: React.FC = () => {
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'profil', label: 'Biodata & Profil', icon: User },
+    { id: 'pendidikan', label: 'Riwayat Pendidikan', icon: GraduationCap },
     { id: 'matkul', label: 'Mata Kuliah', icon: BookOpen },
     { id: 'topik', label: 'Kelola Topik', icon: Layers },
     { id: 'artefak', label: 'Kelola Artefak', icon: FolderOpen },
@@ -738,56 +739,117 @@ const Admin: React.FC = () => {
                 </button>
               </form>
 
-              {/* 5. Kelola Riwayat Pendidikan */}
-              <div className="bg-slate-50 border-2 border-hana-navy p-5 rounded-2xl space-y-5 shadow-brutal-sm mt-8">
-                <div className="flex items-center justify-between border-b-2 border-hana-navy pb-3">
-                  <h3 className="font-black text-sm text-hana-navy flex items-center gap-2">
-                    <GraduationCap className="w-4 h-4 text-hana-teal"/> Kelola Riwayat Pendidikan
-                  </h3>
-                </div>
-
-                {/* Form Tambah Riwayat Pendidikan */}
-                <form onSubmit={handleAddEducation} className="space-y-3 bg-white p-4 rounded-xl border-2 border-dashed border-hana-navy">
-                  <span className="text-xs font-black uppercase text-hana-navy flex items-center gap-1">
-                    <Plus className="w-3.5 h-3.5" /> Tambah Jenjang Pendidikan Baru
-                  </span>
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                    <input type="text" placeholder="Tahun (e.g. 2020 - 2024)" value={newEduYear} onChange={e => setNewEduYear(e.target.value)} className="px-3 py-2 rounded-xl border-2 border-hana-navy text-xs font-bold" />
-                    <input type="text" placeholder="Gelar / Jenjang (e.g. S1 PGSD)" value={newEduTitle} onChange={e => setNewEduTitle(e.target.value)} className="px-3 py-2 rounded-xl border-2 border-hana-navy text-xs font-bold" />
-                    <input type="text" placeholder="Nama Universitas / Institusi" value={newEduInstitution} onChange={e => setNewEduInstitution(e.target.value)} className="px-3 py-2 rounded-xl border-2 border-hana-navy text-xs font-bold" />
+                {/* 5. Shortcut ke Kelola Riwayat Pendidikan */}
+                <div className="bg-slate-50 border-2 border-hana-navy p-5 rounded-2xl shadow-brutal-sm flex flex-col sm:flex-row items-center justify-between gap-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-hana-yellow border-2 border-hana-navy flex items-center justify-center text-hana-navy shadow-brutal-sm">
+                      <GraduationCap className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <h4 className="font-black text-sm text-hana-navy">Riwayat Pendidikan Formal ({educationList.length} jenjang)</h4>
+                      <p className="text-xs text-slate-500 font-medium">Tambah, perbarui gelar, atau hapus riwayat pendidikan Anda.</p>
+                    </div>
                   </div>
-                  <input type="text" placeholder="Keterangan singkat / Prestasi (e.g. Lulus dengan Pujian Cum Laude)" value={newEduDesc} onChange={e => setNewEduDesc(e.target.value)} className="w-full px-3 py-2 rounded-xl border-2 border-hana-navy text-xs font-medium" />
-                  <button type="submit" className="px-4 py-2 bg-hana-yellow text-hana-navy font-black text-xs rounded-xl border-2 border-hana-navy shadow-brutal-sm cursor-pointer hover:bg-yellow-300">
-                    Tambah ke Daftar
+                  <button 
+                    type="button" 
+                    onClick={() => setActiveTab('pendidikan')} 
+                    className="px-4 py-2 bg-hana-yellow text-hana-navy font-black text-xs rounded-xl border-2 border-hana-navy shadow-brutal-sm hover:bg-yellow-300 transition-all flex items-center gap-2 cursor-pointer shrink-0"
+                  >
+                    Buka Menu Riwayat Pendidikan <ArrowRight className="w-4 h-4" />
                   </button>
-                </form>
+                </div>
+            </div>
+          )}
 
-                {/* List Riwayat Pendidikan */}
-                <div className="space-y-3">
-                  {educationList.map((edu, idx) => (
-                    <div key={idx} className="bg-white border-2 border-hana-navy p-4 rounded-xl shadow-brutal-sm">
+          {/* TAB RIWAYAT PENDIDIKAN (MENU KHUSUS) */}
+          {activeTab === 'pendidikan' && (
+            <div className="space-y-6">
+              <div className="border-b-2 border-hana-navy pb-4">
+                <h2 className="text-2xl font-black text-hana-navy">Kelola Riwayat Pendidikan</h2>
+                <p className="text-xs font-semibold text-slate-500 mt-0.5">
+                  Tambah, edit, dan hapus riwayat pendidikan formal Anda. Perubahan langsung tersimpan otomatis ke database.
+                </p>
+              </div>
+
+              {/* Form Tambah Riwayat Pendidikan Baru */}
+              <form onSubmit={handleAddEducation} className="space-y-4 bg-slate-50 p-5 rounded-2xl border-2 border-hana-navy shadow-brutal-sm">
+                <span className="text-xs font-black uppercase text-hana-navy flex items-center gap-2">
+                  <Plus className="w-4 h-4 text-hana-teal" /> Tambah Jenjang Pendidikan Baru
+                </span>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div>
+                    <label className="block text-xs font-extrabold text-hana-navy mb-1">Periode / Tahun</label>
+                    <input type="text" placeholder="e.g. 2020 - 2024" value={newEduYear} onChange={e => setNewEduYear(e.target.value)} className="w-full px-3 py-2 rounded-xl border-2 border-hana-navy text-xs font-bold bg-white" required />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-extrabold text-hana-navy mb-1">Jenjang / Gelar</label>
+                    <input type="text" placeholder="e.g. S1 PGSD" value={newEduTitle} onChange={e => setNewEduTitle(e.target.value)} className="w-full px-3 py-2 rounded-xl border-2 border-hana-navy text-xs font-bold bg-white" required />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-extrabold text-hana-navy mb-1">Institusi / Universitas</label>
+                    <input type="text" placeholder="e.g. Universitas Negeri Yogyakarta" value={newEduInstitution} onChange={e => setNewEduInstitution(e.target.value)} className="w-full px-3 py-2 rounded-xl border-2 border-hana-navy text-xs font-bold bg-white" required />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-xs font-extrabold text-hana-navy mb-1">Keterangan singkat / Prestasi</label>
+                  <input type="text" placeholder="e.g. Lulus dengan Predikat Pujian (Cum Laude)" value={newEduDesc} onChange={e => setNewEduDesc(e.target.value)} className="w-full px-3 py-2 rounded-xl border-2 border-hana-navy text-xs font-medium bg-white" />
+                </div>
+                <button type="submit" className="px-5 py-2.5 bg-hana-yellow text-hana-navy font-black text-xs rounded-xl border-2 border-hana-navy shadow-brutal-sm cursor-pointer hover:bg-yellow-300 flex items-center gap-2">
+                  <Plus className="w-4 h-4" /> Simpan ke Riwayat Pendidikan
+                </button>
+              </form>
+
+              {/* List Riwayat Pendidikan dengan fitur Edit & Hapus */}
+              <div className="space-y-3">
+                <h3 className="font-black text-sm text-hana-navy">Daftar Riwayat Pendidikan Tersimpan ({educationList.length})</h3>
+                {educationList.length === 0 ? (
+                  <div className="p-8 border-2 border-dashed border-hana-navy/30 rounded-2xl text-center text-slate-500 font-bold">
+                    Belum ada riwayat pendidikan. Silakan tambahkan melalui form di atas.
+                  </div>
+                ) : (
+                  educationList.map((edu, idx) => (
+                    <div key={idx} className="bg-white border-2 border-hana-navy p-5 rounded-xl shadow-brutal-sm">
                       {editingEduIndex === idx ? (
-                        <div className="space-y-2">
-                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                            <input type="text" value={editEduYear} onChange={e => setEditEduYear(e.target.value)} className="px-3 py-1.5 text-xs font-bold border-2 border-hana-navy rounded-lg" placeholder="Tahun" />
-                            <input type="text" value={editEduTitle} onChange={e => setEditEduTitle(e.target.value)} className="px-3 py-1.5 text-xs font-bold border-2 border-hana-navy rounded-lg" placeholder="Gelar / Jenjang" />
-                            <input type="text" value={editEduInstitution} onChange={e => setEditEduInstitution(e.target.value)} className="px-3 py-1.5 text-xs font-bold border-2 border-hana-navy rounded-lg" placeholder="Institusi" />
+                        <div className="space-y-3">
+                          <span className="text-xs font-black text-hana-blue uppercase flex items-center gap-1.5">
+                            <Pencil className="w-3.5 h-3.5" /> Sedang Mengedit Riwayat Pendidikan
+                          </span>
+                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                            <div>
+                              <label className="block text-[11px] font-bold text-slate-500 mb-1">Tahun</label>
+                              <input type="text" value={editEduYear} onChange={e => setEditEduYear(e.target.value)} className="w-full px-3 py-2 text-xs font-bold border-2 border-hana-navy rounded-lg" placeholder="Tahun" />
+                            </div>
+                            <div>
+                              <label className="block text-[11px] font-bold text-slate-500 mb-1">Jenjang / Gelar</label>
+                              <input type="text" value={editEduTitle} onChange={e => setEditEduTitle(e.target.value)} className="w-full px-3 py-2 text-xs font-bold border-2 border-hana-navy rounded-lg" placeholder="Gelar" />
+                            </div>
+                            <div>
+                              <label className="block text-[11px] font-bold text-slate-500 mb-1">Universitas / Institusi</label>
+                              <input type="text" value={editEduInstitution} onChange={e => setEditEduInstitution(e.target.value)} className="w-full px-3 py-2 text-xs font-bold border-2 border-hana-navy rounded-lg" placeholder="Institusi" />
+                            </div>
                           </div>
-                          <input type="text" value={editEduDesc} onChange={e => setEditEduDesc(e.target.value)} className="w-full px-3 py-1.5 text-xs font-medium border-2 border-hana-navy rounded-lg" placeholder="Keterangan" />
-                          <div className="flex gap-2 pt-1">
-                            <button onClick={() => handleUpdateEducation(idx)} className="px-3 py-1.5 bg-hana-teal text-white font-bold text-xs border-2 border-hana-navy rounded-lg cursor-pointer">Simpan</button>
-                            <button onClick={() => setEditingEduIndex(null)} className="px-3 py-1.5 bg-rose-100 text-rose-600 font-bold text-xs border-2 border-hana-navy rounded-lg cursor-pointer">Batal</button>
+                          <div>
+                            <label className="block text-[11px] font-bold text-slate-500 mb-1">Keterangan / Prestasi</label>
+                            <input type="text" value={editEduDesc} onChange={e => setEditEduDesc(e.target.value)} className="w-full px-3 py-2 text-xs font-medium border-2 border-hana-navy rounded-lg" placeholder="Keterangan" />
+                          </div>
+                          <div className="flex gap-2 pt-2">
+                            <button onClick={() => handleUpdateEducation(idx)} className="px-4 py-2 bg-hana-teal text-white font-black text-xs border-2 border-hana-navy rounded-xl shadow-brutal-sm cursor-pointer flex items-center gap-1.5">
+                              <CheckCircle2 className="w-4 h-4" /> Simpan Perubahan
+                            </button>
+                            <button onClick={() => setEditingEduIndex(null)} className="px-4 py-2 bg-rose-100 text-rose-600 font-black text-xs border-2 border-hana-navy rounded-xl cursor-pointer">
+                              Batal
+                            </button>
                           </div>
                         </div>
                       ) : (
-                        <div className="flex items-start justify-between gap-4">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                           <div>
-                            <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded bg-hana-yellow border border-hana-navy">
+                            <span className="text-[10px] font-black uppercase px-2.5 py-0.5 rounded-md bg-hana-yellow border border-hana-navy">
                               {edu.year}
                             </span>
-                            <h4 className="font-extrabold text-sm text-hana-navy mt-1">{edu.title}</h4>
-                            <p className="text-xs font-bold text-hana-blue">{edu.institution}</p>
-                            <p className="text-xs text-slate-500 mt-0.5">{edu.description}</p>
+                            <h4 className="font-extrabold text-base text-hana-navy mt-1.5">{edu.title}</h4>
+                            <p className="text-xs font-bold text-hana-blue mt-0.5">{edu.institution}</p>
+                            <p className="text-xs text-slate-600 mt-1">{edu.description}</p>
                           </div>
                           <div className="flex items-center gap-2 shrink-0">
                             <button 
@@ -798,15 +860,15 @@ const Admin: React.FC = () => {
                                 setEditEduInstitution(edu.institution);
                                 setEditEduDesc(edu.description);
                               }}
-                              className="p-1.5 text-hana-blue border border-hana-navy rounded-lg hover:bg-slate-50 cursor-pointer" 
-                              title="Edit"
+                              className="px-3 py-1.5 text-xs font-bold text-hana-blue border-2 border-hana-navy rounded-xl hover:bg-slate-50 cursor-pointer flex items-center gap-1.5" 
+                              title="Edit Riwayat Ini"
                             >
-                              <Pencil className="w-4 h-4" />
+                              <Pencil className="w-3.5 h-3.5" /> Edit
                             </button>
                             <button 
                               onClick={() => handleDeleteEducation(idx)} 
-                              className="p-1.5 text-rose-600 border border-hana-navy rounded-lg hover:bg-rose-50 cursor-pointer" 
-                              title="Hapus"
+                              className="p-2 text-rose-600 border-2 border-hana-navy rounded-xl hover:bg-rose-50 cursor-pointer" 
+                              title="Hapus Riwayat Ini"
                             >
                               <Trash2 className="w-4 h-4" />
                             </button>
@@ -814,8 +876,8 @@ const Admin: React.FC = () => {
                         </div>
                       )}
                     </div>
-                  ))}
-                </div>
+                  ))
+                )}
               </div>
             </div>
           )}
